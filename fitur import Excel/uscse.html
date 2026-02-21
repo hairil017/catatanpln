@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="id">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            Use Case Diagram Sistem Manajemen Laporan Kerja PLN Galesong
+        </title>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+        <style>
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+            }
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 15px;
+                padding: 30px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            }
+            h1 {
+                text-align: center;
+                color: #333;
+                margin-bottom: 10px;
+                font-size: 2.5em;
+            }
+            .subtitle {
+                text-align: center;
+                color: #666;
+                margin-bottom: 30px;
+                font-size: 1.1em;
+            }
+            .diagram-container {
+                background: #f8f9fa;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+                overflow-x: auto;
+            }
+            .description {
+                margin-top: 30px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 10px;
+            }
+            .description h2 {
+                color: #667eea;
+                border-bottom: 2px solid #667eea;
+                padding-bottom: 10px;
+            }
+            .use-case-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 15px;
+                margin-top: 20px;
+            }
+            .use-case-item {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #667eea;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+            .use-case-item h3 {
+                margin: 0 0 10px 0;
+                color: #333;
+                font-size: 1.1em;
+            }
+            .use-case-item p {
+                margin: 0;
+                color: #666;
+                font-size: 0.9em;
+            }
+            .actor-section {
+                margin: 20px 0;
+            }
+            .actor-section h3 {
+                color: #667eea;
+                margin-bottom: 15px;
+            }
+            .flow-description {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 25px;
+                border-radius: 10px;
+                margin: 20px 0;
+                line-height: 1.8;
+                font-size: 1.05em;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            }
+            .flow-description h2 {
+                color: white;
+                margin-top: 0;
+                margin-bottom: 15px;
+                font-size: 1.5em;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📊 Use Case Diagram</h1>
+            <p class="subtitle">Sistem Manajemen Laporan Kerja PLN Galesong</p>
+
+            <div class="flow-description">
+                <h2>📖 Penjelasan Alur Use Case</h2>
+                <p>
+                    Aplikasi PLN Galesong merupakan sistem manajemen laporan
+                    kerja yang dirancang untuk mengelola aktivitas kerja harian
+                    karyawan dengan dua peran utama, yaitu
+                    <strong>Atasan (Admin)</strong> dan
+                    <strong>Karyawan (Kelompok)</strong>. Alur kerja sistem
+                    dimulai dengan proses <strong>Login</strong> dimana kedua
+                    aktor (<strong>Atasan</strong> dan
+                    <strong>Karyawan</strong>) harus melakukan autentikasi
+                    terlebih dahulu dengan memasukkan username dan password
+                    untuk mengakses sistem. Setelah berhasil login,
+                    <strong>Atasan</strong> dapat mengakses dashboard untuk melihat
+                    ringkasan aktivitas, kemudian melakukan <strong>Manajemen Kelompok & Karyawan</strong>
+                    untuk mengelola data kelompok dan karyawan. <strong>Atasan</strong> juga dapat
+                    melakukan <strong>Monitoring Laporan</strong> untuk memantau semua laporan yang masuk,
+                    serta mengakses <strong>Statistik</strong> dan <strong>Generate Prediksi</strong>
+                    untuk analisis data dan prediksi kegiatan. Untuk keperluan pelaporan,
+                    <strong>Atasan</strong> dapat melakukan <strong>Export Data</strong> dan
+                    <strong>Manajemen Excel</strong> untuk mengelola file Excel. Di sisi lain,
+                    <strong>Karyawan</strong> dapat mengakses dashboard kelompok mereka,
+                    melakukan <strong>Input Laporan</strong> untuk memasukkan laporan kerja harian,
+                    melakukan <strong>Generate Prediksi</strong> untuk menghasilkan prediksi kegiatan,
+                    dan melakukan <strong>Export Data Kelompok</strong> untuk mengekspor data
+                    kelompok mereka ke format Excel. Secara keseluruhan, sistem ini memfasilitasi
+                    alur kerja yang terstruktur dari input data oleh karyawan, pemantauan dan
+                    analisis oleh atasan, hingga menghasilkan prediksi dan laporan yang dapat
+                    digunakan untuk pengambilan keputusan yang lebih baik.
+                </p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="mermaid">
+                    graph TB
+                    subgraph "Aplikasi PLN Galesong"
+                        %% Use Case Login
+                        UC0["Login"]
+                        
+                        %% Use Cases untuk Atasan
+                        UC1["Dashboard"]
+                        UC2["Manajemen Kelompok & Karyawan"]
+                        UC3["Monitoring Laporan"]
+                        UC4["Statistik"]
+                        UC5["Generate Prediksi"]
+                        UC6["Export Data"]
+                        UC7["Manajemen Excel"]
+                        
+                        %% Use Cases untuk Karyawan
+                        UC8["Dashboard"]
+                        UC9["Input Laporan"]
+                        UC10["Generate Prediksi"]
+                        UC11["Export Data Kelompok"]
+                    end
+                    
+                    %% Actors
+                    Atasan["👤 Atasan<br />(Admin)"]
+                    Karyawan["👤 Karyawan<br />(Kelompok)"]
+                    
+                    %% Relationships Login
+                    Atasan --> UC0
+                    Karyawan --> UC0
+                    
+                    %% Relationships Atasan
+                    Atasan --> UC1
+                    Atasan --> UC2
+                    Atasan --> UC3
+                    Atasan --> UC4
+                    Atasan --> UC5
+                    Atasan --> UC6
+                    Atasan --> UC7
+                    
+                    %% Relationships Karyawan
+                    Karyawan --> UC8
+                    Karyawan --> UC9
+                    Karyawan --> UC10
+                    Karyawan --> UC11
+                    
+                    %% Styling
+                    style Atasan fill:#F59E0B,stroke:#D97706,stroke-width:3px,color:#fff
+                    style Karyawan fill:#3B82F6,stroke:#2563EB,stroke-width:3px,color:#fff
+                    style UC1 fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px
+                    style UC2 fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px
+                    style UC3 fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px
+                    style UC4 fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px
+                    style UC5 fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px
+                    style UC6 fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px
+                    style UC7 fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px
+                    style UC8 fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px
+                    style UC9 fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px
+                    style UC10 fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px
+                    style UC11 fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px
+                    style UC0 fill:#FFF4E6,stroke:#FF9800,stroke-width:2px
+                </div>
+            </div>
+
+            <div class="description">
+                <h2>📋 Deskripsi Use Case</h2>
+
+                <div class="actor-section">
+                    <h3>🔐 Use Case: Login (Digunakan oleh Semua Aktor)</h3>
+                    <div class="use-case-list">
+                        <div class="use-case-item">
+                            <h3>Login</h3>
+                            <p>
+                                Baik <strong>Atasan</strong> maupun
+                                <strong>Karyawan</strong> harus melakukan proses
+                                login terlebih dahulu dengan memasukkan username
+                                dan password untuk mengakses sistem. Setelah
+                                berhasil login, sistem akan mengarahkan pengguna
+                                ke dashboard sesuai dengan peran mereka
+                                masing-masing (Atasan atau Karyawan).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actor-section">
+                    <h3>👤 Actor: Atasan (Admin)</h3>
+                    <div class="use-case-list">
+                        <div class="use-case-item">
+                            <h3>1. Dashboard</h3>
+                            <p>
+                                Atasan dapat melihat dashboard dengan statistik
+                                lengkap tentang laporan, karyawan, dan kelompok
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>2. Manajemen Kelompok & Karyawan</h3>
+                            <p>
+                                Atasan dapat mengelola data kelompok dan karyawan,
+                                termasuk membuat, membaca, memperbarui, dan menghapus
+                                data kelompok kerja dan data karyawan
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>3. Monitoring Laporan</h3>
+                            <p>
+                                Atasan dapat melihat, memfilter, dan memantau
+                                semua laporan kerja dari semua kelompok
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>4. Statistik</h3>
+                            <p>
+                                Atasan dapat melihat statistik detail dan grafik
+                                analisis data untuk evaluasi dan pengambilan keputusan
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>5. Generate Prediksi</h3>
+                            <p>
+                                Atasan dapat menghasilkan prediksi kegiatan berdasarkan
+                                data laporan dan analisis historis
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>6. Export Data</h3>
+                            <p>
+                                Atasan dapat mengekspor data ke format Excel
+                                untuk keperluan laporan dan dokumentasi
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>7. Manajemen Excel</h3>
+                            <p>
+                                Atasan dapat mengunggah, mengelola, dan
+                                mengunduh file Excel untuk keperluan sistem
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actor-section">
+                    <h3>👤 Actor: Karyawan (Kelompok)</h3>
+                    <div class="use-case-list">
+                        <div class="use-case-item">
+                            <h3>1. Dashboard</h3>
+                            <p>
+                                Karyawan dapat melihat dashboard kelompok dengan
+                                statistik dan ringkasan aktivitas kelompok mereka
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>2. Input Laporan</h3>
+                            <p>
+                                Karyawan dapat membuat, melihat, mengedit, dan
+                                menghapus laporan kerja harian kelompok mereka
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>3. Generate Prediksi</h3>
+                            <p>
+                                Karyawan dapat menghasilkan prediksi kegiatan
+                                berdasarkan data laporan kelompok mereka
+                            </p>
+                        </div>
+                        <div class="use-case-item">
+                            <h3>4. Export Data Kelompok</h3>
+                            <p>
+                                Karyawan dapat mengekspor data laporan kelompok
+                                mereka ke format Excel untuk keperluan dokumentasi
+                                dan pelaporan internal
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: "default",
+                flowchart: {
+                    useMaxWidth: true,
+                    htmlLabels: true,
+                    curve: "basis",
+                },
+            });
+        </script>
+    </body>
+</html>

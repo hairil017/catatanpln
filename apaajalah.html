@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validasi dan Analisis Data - Triple Exponential Smoothing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a4d2e;
+            --primary-light: #2d7a4f;
+            --accent: #ff6b35;
+            --bg-primary: #fafaf8;
+            --bg-secondary: #f0f0eb;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --border: #d4d4ce;
+            --highlight: #fff8e7;
+            --gradient-1: linear-gradient(135deg, #1a4d2e 0%, #2d7a4f 100%);
+            --gradient-2: linear-gradient(135deg, #ff6b35 0%, #ffa94d 100%);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            line-height: 1.8;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: var(--gradient-1);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"><path d="M0,50 Q300,20 600,50 T1200,50 L1200,120 L0,120 Z" fill="rgba(255,255,255,0.05)"/></svg>') repeat-x bottom;
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+            border: 1px solid var(--border);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 3px solid var(--accent);
+            display: inline-block;
+        }
+
+        .section h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            color: var(--primary-light);
+            margin: 2rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section h3::before {
+            content: '◆';
+            color: var(--accent);
+            font-size: 0.8em;
+        }
+
+        .info-box {
+            background: var(--highlight);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+        }
+
+        .info-box strong {
+            color: var(--primary);
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .formula-box {
+            background: var(--bg-secondary);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.1rem;
+            text-align: center;
+            overflow-x: auto;
+        }
+
+        .formula-box .label {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .calculation-steps {
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .calculation-steps .step {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+            border-left: 3px solid var(--accent);
+        }
+
+        .calculation-steps .step-title {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .calculation-steps .step-content {
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--bg-secondary);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+        }
+
+        .result-box {
+            background: var(--gradient-2);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .result-box .value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.8rem;
+            margin: 0.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        thead {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        th {
+            padding: 1rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr {
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: var(--highlight);
+            transform: scale(1.01);
+        }
+
+        tbody tr:nth-child(even) {
+            background: var(--bg-secondary);
+        }
+
+        tbody tr:nth-child(even):hover {
+            background: var(--highlight);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-training {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-testing {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .badge-init {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        .highlight-value {
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--highlight);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .mape-section {
+            background: linear-gradient(135deg, #1a4d2e 0%, #2d7a4f 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 16px;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .mape-section h2 {
+            color: white;
+            border-bottom: 3px solid var(--accent);
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .mape-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 4rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .mape-interpretation {
+            background: rgba(255,255,255,0.15);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            background: var(--primary);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 77, 46, 0.3);
+        }
+
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-table {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            table {
+                font-size: 0.85rem;
+            }
+            
+            th, td {
+                padding: 0.5rem 0.4rem;
+            }
+        }
+
+        .dataset-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .dataset-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .dataset-card h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .dataset-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .scroll-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .scroll-top.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .scroll-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Validasi dan Analisis Data</h1>
+        <p>Triple Exponential Smoothing (Holt-Winters Method)</p>
+        <p>PLN Galesong - Periode Tahun 2025</p>
+    </div>
+
+    <div class="container">
+        <!-- Dataset Information -->
+        <div class="section">
+            <h2>4.2.1 Data Masukan</h2>
+            <p>Data yang digunakan merupakan rekapan Laporan Harian PLN Galesong periode tahun 2025 sebagai input perhitungan forecasting metode Triple Exponential Smoothing. Dataset berisi berbagai kegiatan perbaikan meteran yang telah dikelompokkan berdasarkan bulan untuk menunjukkan jumlah data dan total durasi sebagai dasar analisis.</p>
+            
+            <div class="dataset-info">
+                <div class="dataset-card">
+                    <h4>Total Data</h4>
+                    <div class="value">105</div>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">Pekerjaan perbaikan meteran</p>
+                </div>
+                <div class="dataset-card">
+                    <h4>Data Training</h4>
+                    <div class="value">80%</div>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">No. 1 - 72 (Bulan 1-7)</p>
+                </div>
+                <div class="dataset-card">
+                    <h4>Data Testing</h4>
+                    <div class="value">20%</div>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">No. 73 - 105 (Bulan 8-12)</p>
+                </div>
+                <div class="dataset-card">
+                    <h4>Periode</h4>
+                    <div class="value">12</div>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">Januari - Desember 2025</p>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>📊 Pembagian Dataset (80% Training & 20% Testing):</strong>
+                <p>• Total data keseluruhan: <strong>105 pekerjaan</strong></p>
+                <p>• Data Training (80%): No. 1 sampai 72 (digunakan untuk membentuk model)</p>
+                <p>• Data Testing (20%): No. 73 sampai 105 (digunakan untuk uji akurasi MAPE)</p>
+                <p>• Periode: Januari – Desember 2025</p>
+                <p>• Semua bulan memiliki data lengkap (Januari hingga Desember)</p>
+            </div>
+        </div>
+
+        <!-- Preparation Section -->
+        <div class="section">
+            <h2>1. Persiapan — Konversi Durasi ke Jam Desimal</h2>
+            <p>Data mentah mencatat durasi dalam format H:MM:SS, sehingga sebelum digunakan dalam proses analisis perlu dikonversi ke bentuk jam desimal agar mudah dihitung secara numerik.</p>
+            
+            <div class="formula-box">
+                <div class="label">Rumus Konversi</div>
+                <div>Jam Desimal = Jam + (Menit ÷ 60) + (Detik ÷ 3600)</div>
+            </div>
+
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Contoh: Durasi 0:06:17</div>
+                    <div class="step-content">= 0 + (6 ÷ 60) + (17 ÷ 3600)</div>
+                    <div class="step-content">= 0 + 0.1000 + 0.00472</div>
+                    <div class="step-content">= 0.1047 jam</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai 0.1047 jam menunjukkan bahwa pekerjaan perbaikan meteran tersebut diselesaikan dalam waktu sekitar 6 menit 17 detik setelah dikonversi ke format jam desimal untuk mempermudah proses perhitungan matematis dalam analisis.</p>
+            </div>
+
+            <p style="margin-top: 1.5rem;">Berikut merupakan seluruh data durasi kegiatan pada Bulan 1 (Januari 2025) yang telah dikonversi ke jam desimal sebagai dasar perhitungan rata-rata durasi.</p>
+
+            <h3>Data Durasi Kegiatan Perbaikan Meteran Bulan Januari 2025</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Tanggal</th>
+                        <th>Durasi (H:MM:SS)</th>
+                        <th>Durasi (Jam)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>1-Jan-25</td>
+                        <td>0:06:17</td>
+                        <td class="highlight-value">0.104722</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>1-Jan-25</td>
+                        <td>0:28:10</td>
+                        <td class="highlight-value">0.469444</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>10-Jan-25</td>
+                        <td>0:30:34</td>
+                        <td class="highlight-value">0.509444</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>17-Jan-25</td>
+                        <td>0:08:25</td>
+                        <td class="highlight-value">0.140278</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>20-Jan-25</td>
+                        <td>0:23:17</td>
+                        <td class="highlight-value">0.388056</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Catatan:</strong>
+                <p>Melalui proses ini, kita dapat mengetahui rata-rata durasi pekerjaan dari Januari hingga Desember, sehingga pola data bulanan dapat terlihat dengan lebih jelas dan dapat digunakan sebagai dasar dalam menghitung komponen level, trend, dan seasonal. Secara lengkap, nilai Rata-rata Durasi (Jam) Yₜ untuk setiap bulan dapat dilihat pada tabel di bagian Inisialisasi.</p>
+            </div>
+        </div>
+
+        <!-- Initialization Section -->
+        <div class="section">
+            <h2>2. Inisialisasi — Bulan 1 (Januari)</h2>
+            <p>Bulan pertama digunakan sebagai titik awal perhitungan metode Triple Exponential Smoothing (Holt-Winters). Pada tahap ini ditentukan nilai awal Data Aktual (Y₁) yang akan menjadi dasar dalam menghitung komponen level, trend, dan seasonal pada periode berikutnya.</p>
+
+            <h3>Menghitung Data Aktual (Y₁)</h3>
+            <p>Data Aktual (Yₜ) merupakan rata-rata durasi pekerjaan dalam satu bulan.</p>
+
+            <div class="formula-box">
+                <div class="label">Rumus</div>
+                <div>Y₁ = Total Durasi Bulan 1 ÷ Jumlah Pekerjaan Bulan 1</div>
+            </div>
+
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Langkah 1 — Menjumlahkan Durasi</div>
+                    <div class="step-content">0.1047 + 0.4694 + 0.5094 + 0.1403 + 0.3881 = 1.6119 jam</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Langkah 2 — Membagi dengan Jumlah Data</div>
+                    <div class="step-content">Y₁ = 1.6119 ÷ 5</div>
+                    <div class="step-content">Y₁ = 0.3224 jam</div>
+                </div>
+            </div>
+
+            <div class="result-box">
+                <div>Data Aktual Bulan 1</div>
+                <div class="value">Y₁ = 0.3224 jam</div>
+                <div style="font-size: 0.9rem; margin-top: 0.5rem;">≈ 19 menit 21 detik</div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai 0.3224 jam ini menunjukkan bahwa rata-rata durasi pengerjaan pada bulan pertama adalah sekitar 19 menit 21 detik, yang menjadi titik awal (baseline) untuk perhitungan level pada model forecasting kita.</p>
+            </div>
+
+            <p style="margin-top: 1.5rem;">Melalui proses ini, kita dapat mengetahui rata-rata durasi pekerjaan dari Januari hingga Desember, sehingga pola data bulanan dapat terlihat dengan lebih jelas dan dapat digunakan sebagai dasar dalam menghitung komponen level, trend, dan seasonal. Secara lengkap, nilai Rata-rata Durasi (Jam) Yₜ untuk setiap bulan dapat dilihat pada tabel berikut.</p>
+
+            <h3>Rekap Total dan Rata-rata Durasi Perbaikan Meteran Tahun 2025</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bulan</th>
+                        <th>Nama Bulan</th>
+                        <th>Jumlah Data</th>
+                        <th>Total Durasi (Jam)</th>
+                        <th>Rata-rata Durasi (Jam) Yₜ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Januari</td>
+                        <td>5</td>
+                        <td>1.611944</td>
+                        <td class="highlight-value">0.322389</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Februari</td>
+                        <td>9</td>
+                        <td>3.235833</td>
+                        <td class="highlight-value">0.359537</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Maret</td>
+                        <td>14</td>
+                        <td>5.698611</td>
+                        <td class="highlight-value">0.407044</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>April</td>
+                        <td>8</td>
+                        <td>2.402222</td>
+                        <td class="highlight-value">0.300278</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Mei</td>
+                        <td>7</td>
+                        <td>1.911389</td>
+                        <td class="highlight-value">0.273056</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Juni</td>
+                        <td>5</td>
+                        <td>1.983889</td>
+                        <td class="highlight-value">0.396778</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>Juli</td>
+                        <td>24</td>
+                        <td>6.629568</td>
+                        <td class="highlight-value">0.276232</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>Agustus</td>
+                        <td>11</td>
+                        <td>4.050278</td>
+                        <td class="highlight-value">0.368207</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>September</td>
+                        <td>5</td>
+                        <td>1.490556</td>
+                        <td class="highlight-value">0.298111</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>Oktober</td>
+                        <td>8</td>
+                        <td>2.851667</td>
+                        <td class="highlight-value">0.356458</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>November</td>
+                        <td>2</td>
+                        <td>0.945</td>
+                        <td class="highlight-value">0.4725</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Desember</td>
+                        <td>7</td>
+                        <td>3.789444</td>
+                        <td class="highlight-value">0.541349</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Level Calculation -->
+        <div class="section">
+            <h2>3. Hitung Level Awal (L₀)</h2>
+            <p>Level (Lₜ) merupakan nilai dasar (baseline) yang menggambarkan posisi rata-rata data setelah pengaruh tren dan musiman diabaikan. Penentuan level awal sangat penting karena akan menjadi titik acuan bagi seluruh proses peramalan.</p>
+
+            <div class="info-box">
+                <strong>Catatan Penting:</strong>
+                <p>Untuk inisialisasi, Level Awal (L₀) dihitung menggunakan rata-rata dari beberapa bulan pertama yang memiliki data lengkap. Pada penelitian ini digunakan bulan Januari hingga Juni.</p>
+            </div>
+
+            <div class="formula-box">
+                <div class="label">Rumus Inisialisasi</div>
+                <div>L₀ = (Y₁ + Y₂ + Y₃ + Y₄ + Y₅ + Y₆) ÷ 6</div>
+            </div>
+
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Perhitungan</div>
+                    <div class="step-content">L₀ = (0.3224 + 0.3595 + 0.4070 + 0.3003 + 0.2731 + 0.3968) ÷ 6</div>
+                    <div class="step-content">L₀ = 2.0591 ÷ 6</div>
+                    <div class="step-content">L₀ = 0.3432</div>
+                </div>
+            </div>
+
+            <div class="result-box">
+                <div>Level Awal (L₀)</div>
+                <div class="value">0.3432 jam</div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai level awal 0.3432 menunjukkan rata-rata dasar durasi pekerjaan (baseline) pada awal periode penelitian, yang berfungsi sebagai jangkar utama sebelum dipengaruhi oleh tren dan musiman.</p>
+            </div>
+        </div>
+
+        <!-- Trend Calculation -->
+        <div class="section">
+            <h2>4. Hitung Trend Awal (T₀)</h2>
+            <p>Trend (Tₜ) menunjukkan arah pergerakan data dari waktu ke waktu, apakah mengalami peningkatan atau penurunan. Pada tahap inisialisasi, nilai trend dihitung dengan membandingkan rata-rata periode awal dan periode akhir.</p>
+
+            <div class="formula-box">
+                <div class="label">Rumus Inisialisasi</div>
+                <div>T₀ = (Ȳ_akhir - Ȳ_awal) ÷ n</div>
+            </div>
+
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Rata-rata Bulan 1–4 (Periode Awal)</div>
+                    <div class="step-content">Ȳ_awal = (0.3224 + 0.3595 + 0.4070 + 0.3003) ÷ 4 = 0.3473</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Rata-rata Bulan 9–12 (Periode Akhir)</div>
+                    <div class="step-content">Ȳ_akhir = (0.2981 + 0.3565 + 0.4725 + 0.5413) ÷ 4 = 0.4171</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Perhitungan Trend Awal</div>
+                    <div class="step-content">T₀ = (0.4171 - 0.3473) ÷ 8</div>
+                    <div class="step-content">T₀ = 0.0698 ÷ 8</div>
+                    <div class="step-content">T₀ = 0.00872</div>
+                </div>
+            </div>
+
+            <div class="result-box">
+                <div>Trend Awal (T₀)</div>
+                <div class="value">0.00872</div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai tren positif 0.00872 menunjukkan adanya kecenderungan kenaikan durasi pengerjaan yang lambat namun pasti seiring berjalannya waktu, mungkin karena kompleksitas pekerjaan yang bertambah.</p>
+            </div>
+        </div>
+
+        <!-- Seasonal Calculation -->
+        <div class="section">
+            <h2>5. Menghitung Seasonal Awal (S₀)</h2>
+            <p>Seasonal (Sₜ) digunakan untuk mengidentifikasi pola musiman, yaitu kondisi ketika durasi pada bulan tertentu lebih tinggi atau lebih rendah dibandingkan nilai dasar (baseline).</p>
+
+            <div class="formula-box">
+                <div class="label">Rumus Inisialisasi</div>
+                <div>S₀ = Y₁ - (L₀ + T₀)</div>
+            </div>
+
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Langkah 1 — Menentukan baseline</div>
+                    <div class="step-content">L₀ + T₀ = 0.3432 + 0.00872 = 0.3519</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Langkah 2 — Menghitung nilai seasonal</div>
+                    <div class="step-content">S₀ = 0.3224 - 0.3519 = -0.0295</div>
+                </div>
+            </div>
+
+            <div class="result-box">
+                <div>Seasonal Awal (S₀)</div>
+                <div class="value">-0.0295</div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai negatif -0.0295 menandakan bahwa pada periode Januari, durasi pekerjaan cenderung sedikit lebih cepat dibandingkan rata-rata tahunan, menunjukkan adanya pola penurunan musiman di awal tahun.</p>
+            </div>
+        </div>
+
+        <!-- Forecast Calculation -->
+        <div class="section">
+            <h2>6. Hitung Forecast — F₁</h2>
+            <p>Forecast bulan pertama menjadi dasar peramalan Februari, dihitung dari penjumlahan seluruh komponen inisialisasi yaitu level, trend, dan seasonal sebagai fondasi awal model peramalan.</p>
+
+            <div class="formula-box">
+                <div class="label">Rumus</div>
+                <div>F₁ = L₀ + T₀ + S₀</div>
+            </div>
+
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Perhitungan</div>
+                    <div class="step-content">F₁ = 0.3432 + 0.00872 + (-0.0295)</div>
+                    <div class="step-content">F₁ = 0.3432 + 0.00872 - 0.0295</div>
+                    <div class="step-content">F₁ = 0.3224</div>
+                </div>
+            </div>
+
+            <div class="result-box">
+                <div>Forecast Bulan 1 (F₁)</div>
+                <div class="value">0.3224 jam</div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Hasil forecast pertama 0.3224 jam adalah prediksi awal model yang menyamakan nilai dengan data aktual pertama, sebagai titik awal pembelajaran algoritma Holt-Winters selanjutnya.</p>
+            </div>
+
+            <h3>Inisialisasi Komponen Holt-Winters</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bulan</th>
+                        <th>Nama Bulan</th>
+                        <th>Data Aktual (Yₜ)</th>
+                        <th>Level (Lₜ)</th>
+                        <th>Trend (Tₜ)</th>
+                        <th>Seasonal (Sₜ)</th>
+                        <th>Forecast (Fₜ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Januari</td>
+                        <td class="highlight-value">0.322389</td>
+                        <td class="highlight-value">0.343180</td>
+                        <td class="highlight-value">0.008724</td>
+                        <td class="highlight-value">-0.029515</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Februari</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td class="highlight-value">0.322389</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Training Example -->
+        <div class="section">
+            <h2>7. Contoh Perhitungan Bulan 2 — Februari (Training)</h2>
+            <p>Sebagai perbandingan, berikut contoh perhitungan pada periode training (Bulan 2 — Februari). Tahap ini bertujuan melatih model menggunakan data sebelumnya agar pola level, trend, dan seasonal semakin akurat.</p>
+
+            <div class="info-box">
+                <strong>Data dari Bulan 1 (Januari) yang digunakan:</strong>
+                <p>• L₁ = 0.3432</p>
+                <p>• T₁ = 0.00872</p>
+                <p>• S₁ = -0.02952</p>
+                <p>• Y₂ = 0.3595 (Data Aktual Februari)</p>
+                <p>• Parameter: α = 0.3, β = 0.7, γ = 0.1</p>
+            </div>
+
+            <h3>① Forecast F₂ — Prediksi Februari</h3>
+            <div class="formula-box">
+                <div class="label">Rumus</div>
+                <div>F₂ = L₁ + T₁ + S₁</div>
+            </div>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Perhitungan</div>
+                    <div class="step-content">F₂ = 0.3432 + 0.00872 + (-0.02952)</div>
+                    <div class="step-content">F₂ = 0.3224</div>
+                </div>
+            </div>
+
+            <h3>② Level L₂</h3>
+            <div class="formula-box">
+                <div class="label">Rumus</div>
+                <div>L₂ = α(Y₂ - S₁) + (1 - α)(L₁ + T₁)</div>
+            </div>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Perhitungan</div>
+                    <div class="step-content">L₂ = 0.3(0.3595 - (-0.02952)) + 0.7(0.3432 + 0.00872)</div>
+                    <div class="step-content">L₂ = 0.3(0.38902) + 0.7(0.35192)</div>
+                    <div class="step-content">L₂ = 0.11671 + 0.24634</div>
+                    <div class="step-content">L₂ = 0.3630</div>
+                </div>
+            </div>
+
+            <h3>③ Trend T₂</h3>
+            <div class="formula-box">
+                <div class="label">Rumus</div>
+                <div>T₂ = β(L₂ - L₁) + (1 - β)T₁</div>
+            </div>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Perhitungan</div>
+                    <div class="step-content">T₂ = 0.7(0.3630 - 0.3432) + 0.3(0.00872)</div>
+                    <div class="step-content">T₂ = 0.7(0.0198) + 0.3(0.00872)</div>
+                    <div class="step-content">T₂ = 0.01386 + 0.002616</div>
+                    <div class="step-content">T₂ = 0.01653</div>
+                </div>
+            </div>
+
+            <h3>④ Seasonal S₂</h3>
+            <div class="formula-box">
+                <div class="label">Rumus</div>
+                <div>S₂ = γ(Y₂ - L₂) + (1 - γ)S₁</div>
+            </div>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Perhitungan</div>
+                    <div class="step-content">S₂ = 0.1(0.3595 - 0.3630) + 0.9(-0.02952)</div>
+                    <div class="step-content">S₂ = 0.1(-0.0035) + 0.9(-0.02952)</div>
+                    <div class="step-content">S₂ = -0.00035 - 0.02657</div>
+                    <div class="step-content">S₂ = -0.02691</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complete Results -->
+        <div class="section">
+            <h2>Hasil Perhitungan Holt-Winters Tahun 2025</h2>
+            <p>Setelah dilakukan perhitungan menggunakan metode Triple Exponential Smoothing, diperoleh hasil forecasting secara keseluruhan dari Bulan 1 hingga Bulan 12.</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bulan</th>
+                        <th>Nama</th>
+                        <th>Data Aktual (Yₜ)</th>
+                        <th>Level (Lₜ)</th>
+                        <th>Trend (Tₜ)</th>
+                        <th>Musiman (Sₜ)</th>
+                        <th>Forecast (Fₜ)</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Januari</td>
+                        <td>0.3224</td>
+                        <td>0.3432</td>
+                        <td>0.00872</td>
+                        <td>-0.02952</td>
+                        <td>0.3224</td>
+                        <td><span class="badge badge-init">Inisialisasi</span></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Februari</td>
+                        <td>0.3595</td>
+                        <td>0.3630</td>
+                        <td>0.01653</td>
+                        <td>-0.02691</td>
+                        <td>0.3224</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Maret</td>
+                        <td>0.4070</td>
+                        <td>0.3959</td>
+                        <td>0.02795</td>
+                        <td>-0.02311</td>
+                        <td>0.3527</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>April</td>
+                        <td>0.3003</td>
+                        <td>0.3937</td>
+                        <td>0.00685</td>
+                        <td>-0.03014</td>
+                        <td>0.4007</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Mei</td>
+                        <td>0.2731</td>
+                        <td>0.3713</td>
+                        <td>-0.01359</td>
+                        <td>-0.03695</td>
+                        <td>0.3704</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Juni</td>
+                        <td>0.3968</td>
+                        <td>0.3805</td>
+                        <td>0.00236</td>
+                        <td>-0.03164</td>
+                        <td>0.3208</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>Juli</td>
+                        <td>0.2762</td>
+                        <td>0.3604</td>
+                        <td>-0.01340</td>
+                        <td>-0.03689</td>
+                        <td>0.3513</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>Agustus</td>
+                        <td>0.3682</td>
+                        <td>0.3644</td>
+                        <td>-0.00120</td>
+                        <td>-0.03282</td>
+                        <td>0.3101</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>September</td>
+                        <td>0.2981</td>
+                        <td>0.3535</td>
+                        <td>-0.00798</td>
+                        <td>-0.03508</td>
+                        <td>0.3304</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>Oktober</td>
+                        <td>0.3565</td>
+                        <td>0.3594</td>
+                        <td>0.00168</td>
+                        <td>-0.03187</td>
+                        <td>0.3105</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>November</td>
+                        <td>0.4725</td>
+                        <td>0.4040</td>
+                        <td>0.03178</td>
+                        <td>-0.02183</td>
+                        <td>0.3292</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Desember</td>
+                        <td>0.5413</td>
+                        <td>0.4740</td>
+                        <td>0.05852</td>
+                        <td>-0.01492</td>
+                        <td>0.4140</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Accuracy Evaluation -->
+        <div class="section">
+            <h2>4.3.2 Evaluasi Akurasi Model Peramalan</h2>
+            <p>Setelah memperoleh hasil peramalan menggunakan metode Holt-Winters, tahap berikutnya adalah melakukan evaluasi untuk mengetahui tingkat akurasi model. Evaluasi ini bertujuan mengukur seberapa dekat nilai forecast dengan data aktual. Pengukuran akurasi dilakukan menggunakan beberapa indikator, yaitu Error, Absolute Error, APE (Absolute Percentage Error), dan MAPE (Mean Absolute Percentage Error) pada periode testing.</p>
+
+            <h3>Rumus Perhitungan Akurasi</h3>
+            
+            <div class="formula-box">
+                <div class="label">1. Error</div>
+                <div>Error = Yₜ - Fₜ</div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem;">Mengukur selisih antara data aktual dan hasil peramalan</div>
+            </div>
+
+            <div class="formula-box">
+                <div class="label">2. Absolute Error</div>
+                <div>Absolute Error = |Yₜ - Fₜ|</div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem;">Menunjukkan besar kesalahan tanpa memperhatikan arah</div>
+            </div>
+
+            <div class="formula-box">
+                <div class="label">3. APE (Absolute Percentage Error)</div>
+                <div>APE = (|Yₜ - Fₜ| / Yₜ) × 100%</div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem;">Persentase kesalahan terhadap nilai aktual</div>
+            </div>
+
+            <div class="formula-box">
+                <div class="label">4. MAPE (Mean Absolute Percentage Error)</div>
+                <div>MAPE = Σ APE / Jumlah Periode Testing</div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem;">Rata-rata seluruh nilai APE pada periode testing</div>
+            </div>
+
+            <h3>Data Testing (20% set — Data Mentah)</h3>
+            <p>Tabel di bawah ini menyajikan 33 data terakhir (No. 73–105) dari total dataset yang secara khusus dipisahkan sebagai data uji (Testing). Data ini berfungsi sebagai pembanding utama untuk menguji keandalan hasil prediksi model yang telah dilatih menggunakan data training sebelumnya.</p>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Hari</th>
+                            <th>Tanggal</th>
+                            <th>Waktu Mulai</th>
+                            <th>Waktu Selesai</th>
+                            <th>Durasi (H:MM:SS)</th>
+                            <th>Durasi (Jam)</th>
+                            <th>Bulan</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>73</td>
+                            <td>Sabtu</td>
+                            <td>8/9/2025</td>
+                            <td>11:52:26</td>
+                            <td>12:29:29</td>
+                            <td>0:37:03</td>
+                            <td>0.617500</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>74</td>
+                            <td>Sabtu</td>
+                            <td>8/9/2025</td>
+                            <td>13:39:43</td>
+                            <td>14:21:03</td>
+                            <td>0:41:20</td>
+                            <td>0.688889</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>75</td>
+                            <td>Sabtu</td>
+                            <td>8/9/2025</td>
+                            <td>17:27:33</td>
+                            <td>18:06:32</td>
+                            <td>0:38:59</td>
+                            <td>0.649722</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>76</td>
+                            <td>Selasa</td>
+                            <td>8/12/2025</td>
+                            <td>9:36:01</td>
+                            <td>9:55:18</td>
+                            <td>0:19:17</td>
+                            <td>0.321389</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>77</td>
+                            <td>Selasa</td>
+                            <td>8/12/2025</td>
+                            <td>12:18:41</td>
+                            <td>12:34:43</td>
+                            <td>0:16:02</td>
+                            <td>0.267222</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>78</td>
+                            <td>Jumat</td>
+                            <td>8/15/2025</td>
+                            <td>14:32:17</td>
+                            <td>14:41:40</td>
+                            <td>0:09:23</td>
+                            <td>0.156389</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>79</td>
+                            <td>Jumat</td>
+                            <td>8/15/2025</td>
+                            <td>15:30:52</td>
+                            <td>15:56:23</td>
+                            <td>0:25:31</td>
+                            <td>0.425278</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>80</td>
+                            <td>Senin</td>
+                            <td>8/18/2025</td>
+                            <td>9:12:44</td>
+                            <td>9:22:29</td>
+                            <td>0:09:45</td>
+                            <td>0.162500</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>81</td>
+                            <td>Kamis</td>
+                            <td>8/21/2025</td>
+                            <td>10:28:46</td>
+                            <td>10:41:24</td>
+                            <td>0:12:38</td>
+                            <td>0.210556</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>82</td>
+                            <td>Rabu</td>
+                            <td>8/27/2025</td>
+                            <td>16:25:47</td>
+                            <td>16:50:57</td>
+                            <td>0:25:10</td>
+                            <td>0.419444</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>83</td>
+                            <td>Sabtu</td>
+                            <td>8/30/2025</td>
+                            <td>7:52:51</td>
+                            <td>8:00:44</td>
+                            <td>0:07:53</td>
+                            <td>0.131389</td>
+                            <td>Bulan 8</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>84</td>
+                            <td>Rabu</td>
+                            <td>9/3/2025</td>
+                            <td>12:08:38</td>
+                            <td>12:30:27</td>
+                            <td>0:21:49</td>
+                            <td>0.363611</td>
+                            <td>Bulan 9</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>85</td>
+                            <td>Jumat</td>
+                            <td>9/12/2025</td>
+                            <td>12:36:39</td>
+                            <td>12:44:21</td>
+                            <td>0:07:42</td>
+                            <td>0.128333</td>
+                            <td>Bulan 9</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>86</td>
+                            <td>Minggu</td>
+                            <td>9/21/2025</td>
+                            <td>8:24:25</td>
+                            <td>8:45:32</td>
+                            <td>0:21:07</td>
+                            <td>0.351944</td>
+                            <td>Bulan 9</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>87</td>
+                            <td>Sabtu</td>
+                            <td>9/27/2025</td>
+                            <td>15:09:54</td>
+                            <td>15:26:50</td>
+                            <td>0:16:56</td>
+                            <td>0.282222</td>
+                            <td>Bulan 9</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>88</td>
+                            <td>Sabtu</td>
+                            <td>9/27/2025</td>
+                            <td>16:54:39</td>
+                            <td>17:16:31</td>
+                            <td>0:21:52</td>
+                            <td>0.364444</td>
+                            <td>Bulan 9</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>89</td>
+                            <td>Jumat</td>
+                            <td>10/10/2025</td>
+                            <td>13:38:57</td>
+                            <td>13:51:18</td>
+                            <td>0:12:21</td>
+                            <td>0.205833</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>90</td>
+                            <td>Senin</td>
+                            <td>10/13/2025</td>
+                            <td>10:06:50</td>
+                            <td>10:43:04</td>
+                            <td>0:36:14</td>
+                            <td>0.603889</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>91</td>
+                            <td>Kamis</td>
+                            <td>10/16/2025</td>
+                            <td>9:10:53</td>
+                            <td>9:26:16</td>
+                            <td>0:15:23</td>
+                            <td>0.256389</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>92</td>
+                            <td>Minggu</td>
+                            <td>10/19/2025</td>
+                            <td>9:13:14</td>
+                            <td>9:25:47</td>
+                            <td>0:12:33</td>
+                            <td>0.209167</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>93</td>
+                            <td>Minggu</td>
+                            <td>10/19/2025</td>
+                            <td>15:16:22</td>
+                            <td>15:54:21</td>
+                            <td>0:37:59</td>
+                            <td>0.633056</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>94</td>
+                            <td>Rabu</td>
+                            <td>10/22/2025</td>
+                            <td>9:20:56</td>
+                            <td>9:34:24</td>
+                            <td>0:13:28</td>
+                            <td>0.224444</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>95</td>
+                            <td>Rabu</td>
+                            <td>10/22/2025</td>
+                            <td>9:33:10</td>
+                            <td>9:55:27</td>
+                            <td>0:22:17</td>
+                            <td>0.371389</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>96</td>
+                            <td>Sabtu</td>
+                            <td>10/25/2025</td>
+                            <td>12:15:28</td>
+                            <td>12:36:19</td>
+                            <td>0:20:51</td>
+                            <td>0.347500</td>
+                            <td>Bulan 10</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>97</td>
+                            <td>Rabu</td>
+                            <td>11/12/2025</td>
+                            <td>7:22:43</td>
+                            <td>7:54:32</td>
+                            <td>0:31:49</td>
+                            <td>0.530278</td>
+                            <td>Bulan 11</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>98</td>
+                            <td>Rabu</td>
+                            <td>11/12/2025</td>
+                            <td>13:03:18</td>
+                            <td>13:28:11</td>
+                            <td>0:24:53</td>
+                            <td>0.414722</td>
+                            <td>Bulan 11</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>99</td>
+                            <td>Jumat</td>
+                            <td>12/12/2025</td>
+                            <td>9:13:36</td>
+                            <td>9:38:11</td>
+                            <td>0:24:35</td>
+                            <td>0.409722</td>
+                            <td>Bulan 12</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>Kamis</td>
+                            <td>12/18/2025</td>
+                            <td>15:12:47</td>
+                            <td>15:42:36</td>
+                            <td>0:29:49</td>
+                            <td>0.496944</td>
+                            <td>Bulan 12</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>101</td>
+                            <td>Kamis</td>
+                            <td>12/18/2025</td>
+                            <td>17:34:54</td>
+                            <td>17:54:22</td>
+                            <td>0:19:28</td>
+                            <td>0.324444</td>
+                            <td>Bulan 12</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>102</td>
+                            <td>Minggu</td>
+                            <td>12/21/2025</td>
+                            <td>10:36:01</td>
+                            <td>11:28:52</td>
+                            <td>0:52:51</td>
+                            <td>0.880833</td>
+                            <td>Bulan 12</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>103</td>
+                            <td>Minggu</td>
+                            <td>12/21/2025</td>
+                            <td>12:17:32</td>
+                            <td>12:35:27</td>
+                            <td>0:17:55</td>
+                            <td>0.298611</td>
+                            <td>Bulan 12</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>104</td>
+                            <td>Minggu</td>
+                            <td>12/21/2025</td>
+                            <td>13:37:06</td>
+                            <td>14:26:21</td>
+                            <td>0:49:15</td>
+                            <td>0.820833</td>
+                            <td>Bulan 12</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                        <tr>
+                            <td>105</td>
+                            <td>Sabtu</td>
+                            <td>12/27/2025</td>
+                            <td>16:14:07</td>
+                            <td>16:47:36</td>
+                            <td>0:33:29</td>
+                            <td>0.558056</td>
+                            <td>Bulan 12</td>
+                            <td><span class="badge badge-testing">Testing</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Hasil Perhitungan Data Testing (Summarized)</h3>
+            <p>Tabel ini menyajikan ringkasan variabel model yang dihitung khusus untuk periode testing. Data testing dimulai dari Bulan 8 (Agustus) hingga Bulan 12 (Desember) yang merupakan 20% dari total dataset.</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bulan</th>
+                        <th>Nama</th>
+                        <th>Data Aktual (Yₜ)</th>
+                        <th>Level (Lₜ)</th>
+                        <th>Trend (Tₜ)</th>
+                        <th>Musiman (Sₜ)</th>
+                        <th>Forecast (Fₜ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>8</td>
+                        <td>Agustus</td>
+                        <td>0.3682</td>
+                        <td>0.3644</td>
+                        <td>-0.00120</td>
+                        <td>-0.03282</td>
+                        <td>0.3101</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>September</td>
+                        <td>0.2981</td>
+                        <td>0.3535</td>
+                        <td>-0.00798</td>
+                        <td>-0.03508</td>
+                        <td>0.3304</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>Oktober</td>
+                        <td>0.3565</td>
+                        <td>0.3594</td>
+                        <td>0.00168</td>
+                        <td>-0.03187</td>
+                        <td>0.3105</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>November</td>
+                        <td>0.4725</td>
+                        <td>0.4040</td>
+                        <td>0.03178</td>
+                        <td>-0.02183</td>
+                        <td>0.3292</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Desember</td>
+                        <td>0.5413</td>
+                        <td>0.4740</td>
+                        <td>0.05852</td>
+                        <td>-0.01492</td>
+                        <td>0.4140</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Testing Data Examples -->
+        <div class="section">
+            <h2>Contoh Perhitungan Error — Periode Testing</h2>
+            <p>Perhitungan berikut menggunakan data Bulan 8 (Agustus), Bulan 10 (Oktober), Bulan 11 (November), dan Bulan 12 (Desember) karena periode tersebut termasuk ke dalam proporsi 20% data testing yang digunakan untuk mengukur kemampuan model dalam menghasilkan prediksi yang akurat.</p>
+            
+            <h3>Bulan 8 — Agustus</h3>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Error (Kesalahan Peramalan)</div>
+                    <div class="step-content">Error = Y₈ - F₈ = 0.3682 - 0.3101 = +0.0581</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Absolute Error (Nilai Kesalahan Absolut)</div>
+                    <div class="step-content">|Error| = |+0.0581| = 0.0581</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">APE (Absolute Percentage Error)</div>
+                    <div class="step-content">APE = (0.0581 / 0.3682) × 100% = 15.78%</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai APE 15.78% menunjukkan bahwa model memiliki tingkat akurasi yang baik pada bulan Agustus, dengan penyimpangan prediksi sebesar 15.78% dari data aktual.</p>
+            </div>
+
+            <h3>Bulan 10 — Oktober</h3>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Error (Kesalahan Peramalan)</div>
+                    <div class="step-content">Error = Y₁₀ - F₁₀ = 0.3565 - 0.3105 = +0.0460</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Absolute Error (Nilai Kesalahan Absolut)</div>
+                    <div class="step-content">|Error| = |+0.0460| = 0.0460</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">APE (Absolute Percentage Error)</div>
+                    <div class="step-content">APE = (0.0460 / 0.3565) × 100% = 12.90%</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai APE 12.90% menunjukkan bahwa model memiliki tingkat akurasi yang sangat baik pada bulan Oktober, dengan penyimpangan prediksi hanya sebesar 12.90% dari data aktual di lapangan.</p>
+            </div>
+
+            <h3>Bulan 11 — November</h3>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Error</div>
+                    <div class="step-content">Y₁₁ - F₁₁ = 0.4725 - 0.3292 = +0.1433</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Absolute Error</div>
+                    <div class="step-content">|+0.1433| = 0.1433</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">APE</div>
+                    <div class="step-content">(0.1433 / 0.4725) × 100% = 30.33%</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai APE 30.33% menunjukkan adanya deviasi yang cukup besar pada November, di mana prediksi model meleset karena adanya lonjakan durasi pengerjaan yang cukup signifikan secara mendadak.</p>
+            </div>
+
+            <h3>Bulan 12 — Desember</h3>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Error</div>
+                    <div class="step-content">Y₁₂ - F₁₂ = 0.5413 - 0.4140 = +0.1274</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">Absolute Error</div>
+                    <div class="step-content">|+0.1274| = 0.1274</div>
+                </div>
+                <div class="step">
+                    <div class="step-title">APE</div>
+                    <div class="step-content">(0.1274 / 0.5413) × 100% = 23.53%</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Interpretasi:</strong>
+                <p>Nilai APE 23.53% menunjukkan bahwa meskipun terdapat kesalahan, model masih mampu mengikuti pola kenaikan durasi pengerjaan pada akhir tahun dengan tingkat akurasi yang tetap terjaga.</p>
+            </div>
+        </div>
+
+        <!-- Error Table -->
+        <div class="section">
+            <h2>Hasil Perhitungan Error Model Peramalan</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bulan</th>
+                        <th>Nama</th>
+                        <th>Error</th>
+                        <th>Abs Error</th>
+                        <th>APE (%)</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Januari</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td><span class="badge badge-init">Inisialisasi</span></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Februari</td>
+                        <td>0.03715</td>
+                        <td>0.03715</td>
+                        <td class="highlight-value">10.33</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Maret</td>
+                        <td>0.05438</td>
+                        <td>0.05438</td>
+                        <td class="highlight-value">13.36</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>April</td>
+                        <td>-0.10045</td>
+                        <td>0.10045</td>
+                        <td class="highlight-value">33.45</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Mei</td>
+                        <td>-0.09736</td>
+                        <td>0.09736</td>
+                        <td class="highlight-value">35.65</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Juni</td>
+                        <td>0.07598</td>
+                        <td>0.07598</td>
+                        <td class="highlight-value">19.15</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>Juli</td>
+                        <td>-0.07504</td>
+                        <td>0.07504</td>
+                        <td class="highlight-value">27.17</td>
+                        <td><span class="badge badge-training">Training</span></td>
+                    </tr>
+                    <tr style="background: #fff8e7 !important;">
+                        <td>8</td>
+                        <td>Agustus</td>
+                        <td>0.05810</td>
+                        <td>0.05810</td>
+                        <td class="highlight-value">15.78</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr style="background: #fff8e7 !important;">
+                        <td>9</td>
+                        <td>September</td>
+                        <td>-0.03230</td>
+                        <td>0.03230</td>
+                        <td class="highlight-value">10.83</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr style="background: #fff8e7 !important;">
+                        <td>10</td>
+                        <td>Oktober</td>
+                        <td>0.04598</td>
+                        <td>0.04598</td>
+                        <td class="highlight-value">12.90</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr style="background: #fff8e7 !important;">
+                        <td>11</td>
+                        <td>November</td>
+                        <td>0.14333</td>
+                        <td>0.14333</td>
+                        <td class="highlight-value">30.33</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                    <tr style="background: #fff8e7 !important;">
+                        <td>12</td>
+                        <td>Desember</td>
+                        <td>0.12737</td>
+                        <td>0.12737</td>
+                        <td class="highlight-value">23.53</td>
+                        <td><span class="badge badge-testing">Testing</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MAPE Calculation -->
+        <div class="section">
+            <h2>Cara Menghitung MAPE</h2>
+            <p>MAPE dihitung dengan mencari rata-rata seluruh nilai APE pada periode yang memiliki data. Bulan Januari tidak dihitung karena merupakan tahap inisialisasi.</p>
+
+            <div class="formula-box">
+                <div class="label">Rumus MAPE</div>
+                <div>MAPE = Σ APE ÷ Jumlah Periode</div>
+            </div>
+
+            <h3>Langkah 1 — Mengumpulkan Nilai APE</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bulan</th>
+                        <th>Nama Bulan</th>
+                        <th>APE (%)</th>
+                        <th>Kumulatif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Januari</td>
+                        <td>—</td>
+                        <td>tidak dihitung</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Februari</td>
+                        <td>10.33</td>
+                        <td>10.33</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Maret</td>
+                        <td>13.36</td>
+                        <td>23.69</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>April</td>
+                        <td>33.45</td>
+                        <td>57.14</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Mei</td>
+                        <td>35.65</td>
+                        <td>92.79</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Juni</td>
+                        <td>19.15</td>
+                        <td>111.94</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>Juli</td>
+                        <td>27.17</td>
+                        <td>139.11</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>Agustus</td>
+                        <td>15.78</td>
+                        <td>154.89</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>September</td>
+                        <td>10.83</td>
+                        <td>165.72</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>Oktober</td>
+                        <td>12.90</td>
+                        <td>178.62</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>November</td>
+                        <td>30.33</td>
+                        <td>208.95</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Desember</td>
+                        <td>23.53</td>
+                        <td class="highlight-value">232.48</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Σ APE</div>
+                    <div class="step-content">10.33 + 13.36 + 33.45 + 35.65 + 19.15 + 27.17 + 15.78 + 10.83 + 12.90 + 30.33 + 23.53</div>
+                    <div class="step-content">= 232.48%</div>
+                </div>
+            </div>
+
+            <h3>Langkah 2 — Menentukan Jumlah Periode</h3>
+            <div class="info-box">
+                <strong>Periode yang dihitung:</strong>
+                <p>Bulan 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, dan 12</p>
+                <p><strong>Jumlah periode = 11 bulan</strong></p>
+                <p style="margin-top: 0.5rem; color: var(--text-secondary);">(Bulan 1 = inisialisasi, sehingga tidak disertakan dalam perhitungan MAPE)</p>
+            </div>
+
+            <h3>Langkah 3 — Menghitung MAPE</h3>
+            <div class="calculation-steps">
+                <div class="step">
+                    <div class="step-title">Perhitungan Final</div>
+                    <div class="step-content">MAPE = 232.48 ÷ 11</div>
+                    <div class="step-content">MAPE = 21.13%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Final MAPE Result -->
+        <div class="mape-section">
+            <h2>Nilai MAPE</h2>
+            <div class="mape-value">21.13%</div>
+            
+            <div class="mape-interpretation">
+                <h3 style="color: white; border: none; margin: 0 0 1rem 0;">Interpretasi Hasil</h3>
+                <p style="font-size: 1.1rem; line-height: 1.8;">
+                    Nilai MAPE sebesar <strong>21.13%</strong> menunjukkan bahwa model Triple Exponential Smoothing (Holt-Winters) memiliki tingkat akurasi yang <strong>cukup baik</strong> dalam memprediksi durasi perbaikan meteran. 
+                </p>
+                <p style="font-size: 1.1rem; line-height: 1.8; margin-top: 1rem;">
+                    Meskipun nilai ini sedikit di atas batas ideal 20%, model masih dianggap <strong>layak dan andal</strong> untuk digunakan dalam proses forecasting dengan kesalahan rata-rata sekitar 21.13%.
+                </p>
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <strong>Kategori Akurasi MAPE:</strong><br>
+                    • < 10% = Sangat Baik<br>
+                    • 10% - 20% = Baik<br>
+                    • 20% - 50% = Cukup Baik ← <strong>Hasil Model Ini</strong><br>
+                    • > 50% = Kurang Akurat
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Navigation -->
+        <div class="section" style="text-align: center;">
+            <h2>Kesimpulan</h2>
+            <p style="font-size: 1.1rem; line-height: 1.8; max-width: 800px; margin: 1.5rem auto;">
+                Model Triple Exponential Smoothing (Holt-Winters) berhasil diimplementasikan untuk memprediksi durasi perbaikan meteran di PLN Galesong dengan tingkat akurasi <strong>MAPE 21.13%</strong>. Model ini mampu menangkap pola level, trend, dan seasonal dari data historis tahun 2025, sehingga dapat digunakan sebagai dasar perencanaan dan pengambilan keputusan operasional.
+            </p>
+            
+            <div class="nav-buttons" style="justify-content: center; margin-top: 2rem;">
+                <button class="nav-button" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑ Kembali ke Atas</button>
+                <button class="nav-button" onclick="window.print()">🖨️ Cetak Dokumen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <div class="scroll-top" id="scrollTop" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        ↑
+    </div>
+
+    <script>
+        // Scroll to top button visibility
+        window.addEventListener('scroll', function() {
+            const scrollTop = document.getElementById('scrollTop');
+            if (window.pageYOffset > 300) {
+                scrollTop.classList.add('visible');
+            } else {
+                scrollTop.classList.remove('visible');
+            }
+        });
+
+        // Add fade-in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(30px)';
+            section.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+            observer.observe(section);
+        });
+
+        // Highlight table rows on hover
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.01)';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

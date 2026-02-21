@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analisis Triple Exponential Smoothing — Per Record</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --green:#1a4d2e;--green2:#2d7a4f;--green3:#e8f5ed;
+  --orange:#e85d04;--orange2:#fff3e8;
+  --blue:#1565c0;--blue2:#e3f2fd;
+  --purple:#6a1b9a;--purple2:#f3e5f5;
+  --gray:#4a4a4a;--border:#dde2e0;
+  --bg:#f7f8f6;--white:#ffffff;
+  --mono:'IBM Plex Mono',monospace;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#1a1a1a;line-height:1.75}
+
+/* HEADER */
+.page-header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);
+  color:#fff;padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden}
+.page-header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60px;
+  background:var(--bg);clip-path:ellipse(60% 100% at 50% 100%)}
+.page-header h1{font-family:'Crimson Pro',serif;font-size:2.8rem;font-weight:700;
+  margin-bottom:.5rem;position:relative;z-index:1}
+.page-header p{font-size:1.05rem;opacity:.9;position:relative;z-index:1}
+.badge-header{display:inline-block;background:rgba(255,255,255,.2);
+  border:1px solid rgba(255,255,255,.4);padding:.3rem 1rem;border-radius:20px;
+  font-size:.9rem;margin-top:1rem;position:relative;z-index:1}
+
+/* LAYOUT */
+.container{max-width:1300px;margin:0 auto;padding:3rem 1.5rem}
+.section{background:var(--white);border-radius:16px;padding:2.5rem;
+  margin-bottom:2rem;box-shadow:0 2px 16px rgba(0,0,0,.05);border:1px solid var(--border);
+  animation:fadeUp .5s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* HEADINGS */
+.section-title{font-family:'Crimson Pro',serif;font-size:2rem;color:var(--green);
+  padding-bottom:.6rem;border-bottom:3px solid var(--orange);display:inline-block;margin-bottom:1.5rem}
+.sub-title{font-family:'Crimson Pro',serif;font-size:1.45rem;color:var(--green2);
+  margin:2rem 0 1rem;display:flex;align-items:center;gap:.5rem}
+.sub-title::before{content:'◆';color:var(--orange);font-size:.75em}
+
+/* INFO BOXES */
+.info-box{background:var(--orange2);border-left:4px solid var(--orange);
+  padding:1.25rem 1.5rem;border-radius:8px;margin:1.25rem 0}
+.info-box strong{color:var(--green);display:block;margin-bottom:.4rem;font-size:1.05rem}
+.note-box{background:var(--green3);border-left:4px solid var(--green2);
+  padding:1.25rem 1.5rem;border-radius:8px;margin:1.25rem 0}
+.note-box strong{color:var(--green);display:block;margin-bottom:.4rem}
+
+/* FORMULA */
+.formula{background:#f5f5f2;border:2px dashed var(--green);border-radius:12px;
+  padding:1.25rem;margin:1.25rem 0;text-align:center;font-family:var(--mono);font-size:1.05rem}
+.formula .label{font-family:'DM Sans',sans-serif;font-size:.8rem;text-transform:uppercase;
+  letter-spacing:1px;color:var(--gray);margin-bottom:.4rem}
+
+/* STEPS */
+.steps{border:2px solid var(--green);border-radius:12px;overflow:hidden;margin:1.25rem 0}
+.step{padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
+.step:last-child{border-bottom:none}
+.step-label{font-weight:700;color:var(--green);font-size:.95rem;margin-bottom:.4rem}
+.step-code{background:#f5f5f2;font-family:var(--mono);padding:.6rem 1rem;
+  border-radius:6px;font-size:.95rem;margin:.3rem 0}
+
+/* RESULT BOX */
+.result{background:linear-gradient(135deg,var(--orange) 0%,#ff9a3c 100%);
+  color:#fff;padding:1.5rem;border-radius:12px;text-align:center;margin:1.25rem 0;
+  box-shadow:0 4px 16px rgba(232,93,4,.25)}
+.result .val{font-family:var(--mono);font-size:2rem;font-weight:700;margin:.4rem 0}
+.result .sub{font-size:.9rem;opacity:.9}
+
+/* STATS CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--green3);padding:1.25rem;border-radius:12px;border-left:4px solid var(--green2)}
+.card h4{font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:.3rem}
+.card .val{font-family:var(--mono);font-size:1.8rem;font-weight:700;color:var(--orange)}
+
+/* TABLES */
+.table-wrap{overflow-x:auto;margin:1.25rem 0;border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.07)}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+thead{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);color:#fff}
+th{padding:.85rem .7rem;text-align:left;font-size:.8rem;text-transform:uppercase;
+  letter-spacing:.4px;white-space:nowrap}
+td{padding:.75rem .7rem;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{background:var(--white);transition:background .15s}
+tbody tr:nth-child(even){background:#f9faf8}
+tbody tr:hover{background:#fffbf0}
+.mono{font-family:var(--mono);font-size:.85rem}
+.hl{background:var(--orange2);padding:.15rem .4rem;border-radius:4px;
+  font-family:var(--mono);font-weight:600;color:var(--green)}
+
+/* BADGES */
+.badge{display:inline-block;padding:.2rem .65rem;border-radius:12px;
+  font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.tr{background:var(--blue2);color:var(--blue)}
+.te{background:var(--orange2);color:var(--orange)}
+.init{background:var(--purple2);color:var(--purple)}
+
+/* MAPE HIGHLIGHT */
+.mape-hero{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);
+  color:#fff;padding:3rem 2rem;border-radius:16px;text-align:center;margin:2rem 0}
+.mape-hero h2{font-family:'Crimson Pro',serif;font-size:2.2rem;border-bottom:3px solid var(--orange);
+  display:inline-block;padding-bottom:.5rem;margin-bottom:1.5rem}
+.mape-hero .big{font-family:var(--mono);font-size:4rem;font-weight:700;
+  text-shadow:2px 2px 8px rgba(0,0,0,.2)}
+.mape-hero .interpret{background:rgba(255,255,255,.15);padding:1.5rem;
+  border-radius:12px;margin-top:1.5rem;text-align:left}
+
+/* SCROLL TOP */
+.top-btn{position:fixed;bottom:2rem;right:2rem;background:var(--orange);color:#fff;
+  width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;font-size:1.2rem;
+  box-shadow:0 4px 12px rgba(0,0,0,.2);opacity:0;transition:all .3s}
+.top-btn.show{opacity:1}
+
+@media(max-width:768px){
+  .page-header h1{font-size:1.9rem}
+  .section{padding:1.5rem}
+  .section-title{font-size:1.5rem}
+  .mape-hero .big{font-size:2.5rem}
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Validasi dan Analisis Data</h1>
+  <p>Triple Exponential Smoothing — Metode Holt-Winters</p>
+  <p>PLN Galesong · Perbaikan Meteran 2025</p>
+  <div class="badge-header">⚡ Peramalan Per-Record (Per Transaksi Harian)</div>
+</div>
+
+<div class="container">
+
+<!-- ===== 4.2.1 DATA MASUKAN ===== -->
+<div class="section">
+  <h2 class="section-title">4.2.1 Data Masukan</h2>
+  <p>Data yang digunakan merupakan rekapan Laporan Harian PLN Galesong periode tahun 2025. Berbeda dengan pendekatan per-bulan, pada penelitian ini <strong>setiap record/transaksi harian diperlakukan sebagai satu nilai aktual Yₜ</strong>, sehingga model melakukan prediksi untuk setiap pekerjaan secara individual.</p>
+
+  <div class="cards">
+    <div class="card"><h4>Total Data</h4><div class="val">105</div><p style="margin-top:.3rem;font-size:.9rem;color:var(--gray)">Record pekerjaan</p></div>
+    <div class="card"><h4>Training (80%)</h4><div class="val">73</div><p style="margin-top:.3rem;font-size:.9rem;color:var(--gray)">Record No. 1 – 73</p></div>
+    <div class="card"><h4>Testing (20%)</h4><div class="val">32</div><p style="margin-top:.3rem;font-size:.9rem;color:var(--gray)">Record No. 74 – 106</p></div>
+    <div class="card"><h4>Periode</h4><div class="val">12</div><p style="margin-top:.3rem;font-size:.9rem;color:var(--gray)">Bulan (Jan–Des 2025)</p></div>
+  </div>
+
+  <div class="info-box">
+    <strong>📌 Konsep Peramalan Per-Record</strong>
+    <p>Setiap baris data mentah langsung menjadi nilai aktual Yₜ. Artinya: record No.1 (durasi 0.104722 jam) adalah Y₁, record No.2 (durasi 0.469444 jam) adalah Y₂, dan seterusnya. Model meramalkan durasi setiap pekerjaan berikutnya berdasarkan pola dari pekerjaan-pekerjaan sebelumnya.</p>
+  </div>
+
+  <div class="info-box">
+    <strong>📊 Pembagian Dataset (80% Training & 20% Testing):</strong>
+    <p>• Data Training (80%): No. 1 sampai 73 → digunakan untuk melatih model</p>
+    <p>• Data Testing (20%): No. 74 sampai 106 → digunakan untuk menguji akurasi model</p>
+    <p>• Parameter: α = 0.3 (level), β = 0.7 (trend), γ = 0.1 (seasonal)</p>
+  </div>
+</div>
+
+<!-- ===== 1. PERSIAPAN ===== -->
+<div class="section">
+  <h2 class="section-title">1. Persiapan — Konversi Durasi ke Jam Desimal</h2>
+  <p>Data mentah mencatat durasi dalam format H:MM:SS. Sebelum digunakan dalam proses analisis, durasi harus dikonversi ke bentuk jam desimal agar dapat dihitung secara numerik. <strong>Nilai jam desimal inilah yang menjadi nilai aktual Yₜ untuk setiap record.</strong></p>
+
+  <div class="formula">
+    <div class="label">Rumus Konversi</div>
+    Jam Desimal = Jam + (Menit ÷ 60) + (Detik ÷ 3600)
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Contoh: Record No. 1 — Durasi 0:06:17</div>
+      <div class="step-code">= 0 + (6 ÷ 60) + (17 ÷ 3600)</div>
+      <div class="step-code">= 0 + 0.1000 + 0.00472</div>
+      <div class="step-code">= <strong>0.1047 jam → Y₁ = 0.104722</strong></div>
+    </div>
+    <div class="step">
+      <div class="step-label">Contoh: Record No. 2 — Durasi 0:28:10</div>
+      <div class="step-code">= 0 + (28 ÷ 60) + (10 ÷ 3600)</div>
+      <div class="step-code">= 0 + 0.4667 + 0.00278</div>
+      <div class="step-code">= <strong>0.4694 jam → Y₂ = 0.469444</strong></div>
+    </div>
+  </div>
+
+  <div class="note-box">
+    <strong>Catatan Penting:</strong>
+    <p>Karena peramalan dilakukan per-record, <strong>tidak ada proses rata-rata bulanan</strong>. Setiap durasi pekerjaan langsung menjadi nilai Yₜ dalam urutan kronologis. Total terdapat 105 nilai Yₜ (Y₁ hingga Y₁₀₅) yang mewakili setiap transaksi perbaikan meteran sepanjang tahun 2025.</p>
+  </div>
+
+  <h3 class="sub-title">Data Lengkap — Seluruh Record Perbaikan Meteran 2025</h3>
+  <p>Berikut adalah seluruh data yang digunakan, di mana setiap baris langsung menjadi nilai aktual Yₜ:</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>No (t)</th><th>Hari</th><th>Tanggal</th><th>Waktu Mulai</th><th>Waktu Selesai</th><th>Durasi (H:MM:SS)</th><th>Yₜ (Jam Desimal)</th><th>Bulan</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">1</td><td>Rabu</td><td>1/1/2025</td><td>8:19:22</td><td>8:25:39</td><td class="mono">0:06:17</td><td><span class="hl">0.104722</span></td><td>Bulan 1</td><td><span class="badge init">Inisialisasi</span></td></tr>
+        <tr><td class="mono">2</td><td>Rabu</td><td>1/1/2025</td><td>14:44:23</td><td>15:12:33</td><td class="mono">0:28:10</td><td><span class="hl">0.469444</span></td><td>Bulan 1</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">3</td><td>Jumat</td><td>1/10/2025</td><td>10:24:52</td><td>10:55:26</td><td class="mono">0:30:34</td><td><span class="hl">0.509444</span></td><td>Bulan 1</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">4</td><td>Jumat</td><td>1/17/2025</td><td>8:43:53</td><td>8:52:18</td><td class="mono">0:08:25</td><td><span class="hl">0.140278</span></td><td>Bulan 1</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">5</td><td>Senin</td><td>1/20/2025</td><td>11:22:34</td><td>11:45:51</td><td class="mono">0:23:17</td><td><span class="hl">0.388056</span></td><td>Bulan 1</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">6</td><td>Selasa</td><td>2/4/2025</td><td>17:40:13</td><td>17:51:55</td><td class="mono">0:11:42</td><td><span class="hl">0.195000</span></td><td>Bulan 2</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">7</td><td>Jumat</td><td>2/7/2025</td><td>16:56:38</td><td>17:33:01</td><td class="mono">0:36:23</td><td><span class="hl">0.606389</span></td><td>Bulan 2</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">8</td><td>Senin</td><td>2/10/2025</td><td>8:34:23</td><td>8:56:29</td><td class="mono">0:22:06</td><td><span class="hl">0.368333</span></td><td>Bulan 2</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">9</td><td>Senin</td><td>2/10/2025</td><td>9:22:38</td><td>9:53:28</td><td class="mono">0:30:50</td><td><span class="hl">0.513889</span></td><td>Bulan 2</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">10</td><td>Kamis</td><td>2/13/2025</td><td>8:35:20</td><td>8:46:44</td><td class="mono">0:11:24</td><td><span class="hl">0.190000</span></td><td>Bulan 2</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td colspan="9" style="text-align:center;padding:.5rem;background:#f0f0eb;font-size:.85rem;color:var(--gray)">… data No. 11 – 73 (Training) …</td></tr>
+        <tr><td class="mono">73</td><td>Kamis</td><td>7/31/2025</td><td>15:45:19</td><td>16:10:54</td><td class="mono">0:25:35</td><td><span class="hl">0.426400</span></td><td>Bulan 7</td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">74</td><td>Sabtu</td><td>8/9/2025</td><td>11:52:26</td><td>12:29:29</td><td class="mono">0:37:03</td><td><span class="hl">0.617500</span></td><td>Bulan 8</td><td><span class="badge te">Testing</span></td></tr>
+        <tr><td class="mono">75</td><td>Sabtu</td><td>8/9/2025</td><td>13:39:43</td><td>14:21:03</td><td class="mono">0:41:20</td><td><span class="hl">0.688889</span></td><td>Bulan 8</td><td><span class="badge te">Testing</span></td></tr>
+        <tr><td colspan="9" style="text-align:center;padding:.5rem;background:#fff3e8;font-size:.85rem;color:var(--orange)">… data No. 76 – 105 (Testing) …</td></tr>
+        <tr><td class="mono">106</td><td>Sabtu</td><td>12/27/2025</td><td>16:14:07</td><td>16:47:36</td><td class="mono">0:33:29</td><td><span class="hl">0.558056</span></td><td>Bulan 12</td><td><span class="badge te">Testing</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== 2. INISIALISASI ===== -->
+<div class="section">
+  <h2 class="section-title">2. Inisialisasi — Record Pertama (t=1)</h2>
+  <p>Record pertama (No. 1, 1 Januari 2025) digunakan sebagai titik awal (baseline) model. Nilai inisialisasi L₀, T₀, dan S₀ dihitung dari data training untuk memberikan titik awal yang representatif.</p>
+
+  <h3 class="sub-title">Data Aktual Y₁ (Record Pertama)</h3>
+  <p>Nilai aktual untuk record pertama adalah durasi pekerjaan itu sendiri setelah konversi:</p>
+  <div class="result">
+    <div>Y₁ = Durasi Record No. 1</div>
+    <div class="val">Y₁ = 0.104722 jam</div>
+    <div class="sub">≈ 6 menit 17 detik (pekerjaan tanggal 1 Januari 2025)</div>
+  </div>
+
+  <h3 class="sub-title">Hitung Level Awal (L₀)</h3>
+  <p>L₀ dihitung sebagai rata-rata dari 5 data training pertama (sebagai baseline):</p>
+  <div class="formula">
+    <div class="label">Rumus</div>
+    L₀ = (Y₁ + Y₂ + Y₃ + Y₄ + Y₅) ÷ 5
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Penjumlahan 5 data pertama</div>
+      <div class="step-code">0.104722 + 0.469444 + 0.509444 + 0.140278 + 0.388056 = 1.611944</div>
+    </div>
+    <div class="step">
+      <div class="step-label">Dibagi jumlah data</div>
+      <div class="step-code">L₀ = 1.611944 ÷ 5 = <strong>0.322389</strong></div>
+    </div>
+  </div>
+  <div class="result"><div>Level Awal (L₀)</div><div class="val">L₀ = 0.322389</div></div>
+
+  <h3 class="sub-title">Hitung Trend Awal (T₀)</h3>
+  <p>T₀ dihitung dari selisih rata-rata kelompok data awal dan akhir training:</p>
+  <div class="formula">
+    <div class="label">Rumus</div>
+    T₀ = (Ȳ_akhir − Ȳ_awal) ÷ n
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Rata-rata 5 data awal training (No. 1–5)</div>
+      <div class="step-code">Ȳ_awal = (0.1047+0.4694+0.5094+0.1403+0.3881) ÷ 5 = 0.322389</div>
+    </div>
+    <div class="step">
+      <div class="step-label">Rata-rata 5 data akhir training (No. 69–73)</div>
+      <div class="step-code">Ȳ_akhir = (0.1197+0.3275+0.4453+0.3747+0.4264) ÷ 5 = 0.338720</div>
+    </div>
+    <div class="step">
+      <div class="step-label">Perhitungan T₀ (jarak n = 68 record)</div>
+      <div class="step-code">T₀ = (0.338720 − 0.322389) ÷ 68 = 0.016331 ÷ 68 = <strong>0.000240</strong></div>
+    </div>
+  </div>
+  <div class="result"><div>Trend Awal (T₀)</div><div class="val">T₀ = 0.000240</div><div class="sub">Tren positif kecil — ada kenaikan durasi per-record yang sangat gradual</div></div>
+
+  <h3 class="sub-title">Hitung Seasonal Awal (S₀)</h3>
+  <div class="formula">
+    <div class="label">Rumus</div>
+    S₀ = Y₁ − (L₀ + T₀)
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Baseline</div>
+      <div class="step-code">L₀ + T₀ = 0.322389 + 0.000240 = 0.322629</div>
+    </div>
+    <div class="step">
+      <div class="step-label">Seasonal Awal</div>
+      <div class="step-code">S₀ = 0.104722 − 0.322629 = <strong>−0.217907</strong></div>
+    </div>
+  </div>
+  <div class="result"><div>Seasonal Awal (S₀)</div><div class="val">S₀ = −0.217907</div><div class="sub">Negatif: record pertama memiliki durasi di bawah rata-rata baseline</div></div>
+
+  <h3 class="sub-title">Hitung Forecast Awal (F₁)</h3>
+  <div class="formula">
+    <div class="label">Rumus</div>
+    F₁ = L₀ + T₀ + S₀
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Perhitungan</div>
+      <div class="step-code">F₁ = 0.322389 + 0.000240 + (−0.217907)</div>
+      <div class="step-code">F₁ = <strong>0.104722</strong> (sama dengan Y₁ — titik awal model)</div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Ringkasan Nilai Inisialisasi</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Komponen</th><th>Simbol</th><th>Nilai</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td>Data Aktual Pertama</td><td class="mono">Y₁</td><td><span class="hl">0.104722</span></td><td>Durasi record No.1 (6 menit 17 detik)</td></tr>
+        <tr><td>Level Awal</td><td class="mono">L₀</td><td><span class="hl">0.322389</span></td><td>Rata-rata 5 data training pertama</td></tr>
+        <tr><td>Trend Awal</td><td class="mono">T₀</td><td><span class="hl">0.000240</span></td><td>Kenaikan gradual per-record</td></tr>
+        <tr><td>Seasonal Awal</td><td class="mono">S₀</td><td><span class="hl">−0.217907</span></td><td>Record pertama di bawah baseline</td></tr>
+        <tr><td>Forecast Pertama</td><td class="mono">F₁</td><td><span class="hl">0.104722</span></td><td>Sama dengan Y₁ (titik awal)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== 3. CONTOH PERHITUNGAN ===== -->
+<div class="section">
+  <h2 class="section-title">3. Contoh Perhitungan — Record No. 2 (Training)</h2>
+  <p>Berikut adalah contoh detail perhitungan Holt-Winters untuk record No. 2 menggunakan nilai dari record sebelumnya. Parameter yang digunakan: <strong>α = 0.3, β = 0.7, γ = 0.1</strong></p>
+
+  <div class="info-box">
+    <strong>Data yang digunakan dari Record No. 1 (sebelumnya):</strong>
+    <p>• L₁ = 0.322389 &nbsp;|&nbsp; T₁ = 0.000240 &nbsp;|&nbsp; S₁ = −0.217907</p>
+    <p>• Y₂ = 0.469444 (Data Aktual Record No. 2 — durasi 0:28:10)</p>
+  </div>
+
+  <h3 class="sub-title">① Forecast F₂ — Prediksi untuk Record No. 2</h3>
+  <div class="formula"><div class="label">Rumus</div>F₂ = L₁ + T₁ + S₁</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Perhitungan</div>
+      <div class="step-code">F₂ = 0.322389 + 0.000240 + (−0.217907)</div>
+      <div class="step-code">F₂ = <strong>0.104722 jam</strong></div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">② Level L₂</h3>
+  <div class="formula"><div class="label">Rumus</div>L₂ = α(Y₂ − S₁) + (1−α)(L₁ + T₁)</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Perhitungan</div>
+      <div class="step-code">L₂ = 0.3 × (0.469444 − (−0.217907)) + 0.7 × (0.322389 + 0.000240)</div>
+      <div class="step-code">L₂ = 0.3 × 0.687351 + 0.7 × 0.322629</div>
+      <div class="step-code">L₂ = 0.206205 + 0.225840 = <strong>0.432046</strong></div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">③ Trend T₂</h3>
+  <div class="formula"><div class="label">Rumus</div>T₂ = β(L₂ − L₁) + (1−β)T₁</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Perhitungan</div>
+      <div class="step-code">T₂ = 0.7 × (0.432046 − 0.322389) + 0.3 × 0.000240</div>
+      <div class="step-code">T₂ = 0.7 × 0.109657 + 0.3 × 0.000240</div>
+      <div class="step-code">T₂ = 0.076760 + 0.000072 = <strong>0.076832</strong></div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">④ Seasonal S₂</h3>
+  <div class="formula"><div class="label">Rumus</div>S₂ = γ(Y₂ − L₂) + (1−γ)S₁</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Perhitungan</div>
+      <div class="step-code">S₂ = 0.1 × (0.469444 − 0.432046) + 0.9 × (−0.217907)</div>
+      <div class="step-code">S₂ = 0.1 × 0.037398 + 0.9 × (−0.217907)</div>
+      <div class="step-code">S₂ = 0.003740 + (−0.196116) = <strong>−0.192376</strong></div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">⑤ Error Record No. 2</h3>
+  <div class="steps">
+    <div class="step"><div class="step-label">Error</div><div class="step-code">Error = Y₂ − F₂ = 0.469444 − 0.104722 = <strong>+0.364722</strong></div></div>
+    <div class="step"><div class="step-label">Absolute Error</div><div class="step-code">|Error| = 0.364722</div></div>
+    <div class="step"><div class="step-label">APE</div><div class="step-code">APE = (0.364722 / 0.469444) × 100% = <strong>77.69%</strong></div></div>
+  </div>
+</div>
+
+<!-- ===== 4. HASIL LENGKAP HOLT-WINTERS ===== -->
+<div class="section">
+  <h2 class="section-title">4. Hasil Perhitungan Holt-Winters — Seluruh Record</h2>
+  <p>Tabel berikut menampilkan hasil perhitungan lengkap untuk setiap record, dengan masing-masing record memiliki nilai Level (Lₜ), Trend (Tₜ), Seasonal (Sₜ), Forecast (Fₜ), dan indikator error:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>No (t)</th><th>Tanggal</th><th>Yₜ (Aktual)</th><th>Lₜ</th><th>Tₜ</th><th>Sₜ</th><th>Fₜ (Forecast)</th><th>Error</th><th>|Error|</th><th>APE (%)</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">1</td><td>1/1/2025</td><td class="mono">0.104722</td><td class="mono">0.322389</td><td class="mono">0.000240</td><td class="mono">−0.217907</td><td class="mono">0.104722</td><td>—</td><td>—</td><td>—</td><td><span class="badge init">Init</span></td></tr>
+        <tr><td class="mono">2</td><td>1/1/2025</td><td class="mono">0.469444</td><td class="mono">0.432046</td><td class="mono">0.076832</td><td class="mono">−0.192376</td><td class="mono">0.104722</td><td class="mono">+0.364722</td><td class="mono">0.364722</td><td><span class="hl">77.69</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">3</td><td>1/10/2025</td><td class="mono">0.509444</td><td class="mono">0.566760</td><td class="mono">0.117350</td><td class="mono">−0.178870</td><td class="mono">0.316501</td><td class="mono">+0.192943</td><td class="mono">0.192943</td><td><span class="hl">37.87</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">4</td><td>1/17/2025</td><td class="mono">0.140278</td><td class="mono">0.574622</td><td class="mono">0.040708</td><td class="mono">−0.204418</td><td class="mono">0.505240</td><td class="mono">−0.364962</td><td class="mono">0.364962</td><td><span class="hl">260.17</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">5</td><td>1/20/2025</td><td class="mono">0.388056</td><td class="mono">0.608473</td><td class="mono">0.035908</td><td class="mono">−0.206018</td><td class="mono">0.410912</td><td class="mono">−0.022856</td><td class="mono">0.022856</td><td><span class="hl">5.89</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">6</td><td>2/4/2025</td><td class="mono">0.195000</td><td class="mono">0.571372</td><td class="mono">−0.015198</td><td class="mono">−0.223053</td><td class="mono">0.438363</td><td class="mono">−0.243363</td><td class="mono">0.243363</td><td><span class="hl">124.80</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">7</td><td>2/7/2025</td><td class="mono">0.606389</td><td class="mono">0.638154</td><td class="mono">0.042188</td><td class="mono">−0.203924</td><td class="mono">0.333121</td><td class="mono">+0.273268</td><td class="mono">0.273268</td><td><span class="hl">45.06</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">8</td><td>2/10/2025</td><td class="mono">0.368333</td><td class="mono">0.647917</td><td class="mono">0.019490</td><td class="mono">−0.211490</td><td class="mono">0.476418</td><td class="mono">−0.108085</td><td class="mono">0.108085</td><td><span class="hl">29.34</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">9</td><td>2/10/2025</td><td class="mono">0.513889</td><td class="mono">0.684799</td><td class="mono">0.031664</td><td class="mono">−0.207432</td><td class="mono">0.455917</td><td class="mono">+0.057972</td><td class="mono">0.057972</td><td><span class="hl">11.28</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">10</td><td>2/13/2025</td><td class="mono">0.190000</td><td class="mono">0.620754</td><td class="mono">−0.035332</td><td class="mono">−0.229764</td><td class="mono">0.509031</td><td class="mono">−0.319031</td><td class="mono">0.319031</td><td><span class="hl">167.91</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td colspan="11" style="text-align:center;padding:.6rem;background:#f0f0eb;font-size:.85rem;color:var(--gray)">… No. 11 – 73 (Training) — total 72 data training setelah inisialisasi …</td></tr>
+        <tr><td class="mono">72</td><td>7/31/2025</td><td class="mono">0.374700</td><td class="mono">0.559602</td><td class="mono">0.067600</td><td class="mono">−0.195454</td><td class="mono">0.357951</td><td class="mono">+0.016749</td><td class="mono">0.016749</td><td><span class="hl">4.47</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr><td class="mono">73</td><td>7/31/2025</td><td class="mono">0.426400</td><td class="mono">0.625597</td><td class="mono">0.066477</td><td class="mono">−0.195828</td><td class="mono">0.431748</td><td class="mono">−0.005348</td><td class="mono">0.005348</td><td><span class="hl">1.25</span></td><td><span class="badge tr">Training</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">74</td><td>8/9/2025</td><td class="mono">0.617500</td><td class="mono">0.728451</td><td class="mono">0.091940</td><td class="mono">−0.187340</td><td class="mono">0.496246</td><td class="mono">+0.121254</td><td class="mono">0.121254</td><td><span class="hl">19.64</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">75</td><td>8/9/2025</td><td class="mono">0.688889</td><td class="mono">0.837142</td><td class="mono">0.103666</td><td class="mono">−0.183432</td><td class="mono">0.633051</td><td class="mono">+0.055838</td><td class="mono">0.055838</td><td><span class="hl">8.11</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">76</td><td>8/9/2025</td><td class="mono">0.649722</td><td class="mono">0.908512</td><td class="mono">0.081059</td><td class="mono">−0.190967</td><td class="mono">0.757377</td><td class="mono">−0.107655</td><td class="mono">0.107655</td><td><span class="hl">16.57</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">77</td><td>8/12/2025</td><td class="mono">0.321389</td><td class="mono">0.846407</td><td class="mono">−0.019156</td><td class="mono">−0.224372</td><td class="mono">0.798604</td><td class="mono">−0.477215</td><td class="mono">0.477215</td><td><span class="hl">148.49</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">78</td><td>8/12/2025</td><td class="mono">0.267222</td><td class="mono">0.726554</td><td class="mono">−0.089644</td><td class="mono">−0.247868</td><td class="mono">0.602878</td><td class="mono">−0.335656</td><td class="mono">0.335656</td><td><span class="hl">125.61</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">79</td><td>8/15/2025</td><td class="mono">0.156389</td><td class="mono">0.567114</td><td class="mono">−0.138501</td><td class="mono">−0.264154</td><td class="mono">0.389041</td><td class="mono">−0.232652</td><td class="mono">0.232652</td><td><span class="hl">148.77</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">80</td><td>8/15/2025</td><td class="mono">0.425278</td><td class="mono">0.506859</td><td class="mono">−0.083729</td><td class="mono">−0.245897</td><td class="mono">0.164459</td><td class="mono">+0.260819</td><td class="mono">0.260819</td><td><span class="hl">61.33</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">81</td><td>8/18/2025</td><td class="mono">0.162500</td><td class="mono">0.418710</td><td class="mono">−0.086823</td><td class="mono">−0.246928</td><td class="mono">0.177233</td><td class="mono">−0.014733</td><td class="mono">0.014733</td><td><span class="hl">9.07</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">82</td><td>8/21/2025</td><td class="mono">0.210556</td><td class="mono">0.369566</td><td class="mono">−0.060448</td><td class="mono">−0.238136</td><td class="mono">0.084959</td><td class="mono">+0.125597</td><td class="mono">0.125597</td><td><span class="hl">59.65</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">83</td><td>8/27/2025</td><td class="mono">0.419444</td><td class="mono">0.413657</td><td class="mono">0.012729</td><td class="mono">−0.213744</td><td class="mono">0.070982</td><td class="mono">+0.348462</td><td class="mono">0.348462</td><td><span class="hl">83.08</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">84</td><td>8/30/2025</td><td class="mono">0.131389</td><td class="mono">0.402010</td><td class="mono">−0.004334</td><td class="mono">−0.219432</td><td class="mono">0.212643</td><td class="mono">−0.081254</td><td class="mono">0.081254</td><td><span class="hl">61.84</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">85</td><td>9/3/2025</td><td class="mono">0.363611</td><td class="mono">0.453286</td><td class="mono">0.034593</td><td class="mono">−0.206456</td><td class="mono">0.178245</td><td class="mono">+0.185366</td><td class="mono">0.185366</td><td><span class="hl">50.98</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">86</td><td>9/12/2025</td><td class="mono">0.128333</td><td class="mono">0.441952</td><td class="mono">0.002444</td><td class="mono">−0.217172</td><td class="mono">0.281423</td><td class="mono">−0.153090</td><td class="mono">0.153090</td><td><span class="hl">119.29</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">87</td><td>9/21/2025</td><td class="mono">0.351944</td><td class="mono">0.481812</td><td class="mono">0.028635</td><td class="mono">−0.208442</td><td class="mono">0.227224</td><td class="mono">+0.124720</td><td class="mono">0.124720</td><td><span class="hl">35.44</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">88</td><td>9/27/2025</td><td class="mono">0.282222</td><td class="mono">0.504513</td><td class="mono">0.024481</td><td class="mono">−0.209827</td><td class="mono">0.302006</td><td class="mono">−0.019784</td><td class="mono">0.019784</td><td><span class="hl">7.01</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">89</td><td>9/27/2025</td><td class="mono">0.364444</td><td class="mono">0.542576</td><td class="mono">0.033989</td><td class="mono">−0.206657</td><td class="mono">0.319166</td><td class="mono">+0.045278</td><td class="mono">0.045278</td><td><span class="hl">12.42</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">90</td><td>10/10/2025</td><td class="mono">0.205833</td><td class="mono">0.527343</td><td class="mono">−0.000467</td><td class="mono">−0.218143</td><td class="mono">0.369908</td><td class="mono">−0.164075</td><td class="mono">0.164075</td><td><span class="hl">79.71</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">91</td><td>10/13/2025</td><td class="mono">0.603889</td><td class="mono">0.615423</td><td class="mono">0.061516</td><td class="mono">−0.197482</td><td class="mono">0.308734</td><td class="mono">+0.295155</td><td class="mono">0.295155</td><td><span class="hl">48.88</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">92</td><td>10/16/2025</td><td class="mono">0.256389</td><td class="mono">0.610018</td><td class="mono">0.014672</td><td class="mono">−0.213096</td><td class="mono">0.479457</td><td class="mono">−0.223068</td><td class="mono">0.223068</td><td><span class="hl">87.00</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">93</td><td>10/19/2025</td><td class="mono">0.209167</td><td class="mono">0.563962</td><td class="mono">−0.027838</td><td class="mono">−0.227266</td><td class="mono">0.411593</td><td class="mono">−0.202426</td><td class="mono">0.202426</td><td><span class="hl">96.78</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">94</td><td>10/19/2025</td><td class="mono">0.633056</td><td class="mono">0.633384</td><td class="mono">0.040244</td><td class="mono">−0.204572</td><td class="mono">0.308858</td><td class="mono">+0.324198</td><td class="mono">0.324198</td><td><span class="hl">51.21</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">95</td><td>10/22/2025</td><td class="mono">0.224444</td><td class="mono">0.600244</td><td class="mono">−0.011125</td><td class="mono">−0.221695</td><td class="mono">0.469055</td><td class="mono">−0.244611</td><td class="mono">0.244611</td><td><span class="hl">108.99</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">96</td><td>10/22/2025</td><td class="mono">0.371389</td><td class="mono">0.590309</td><td class="mono">−0.010292</td><td class="mono">−0.221418</td><td class="mono">0.367424</td><td class="mono">+0.003965</td><td class="mono">0.003965</td><td><span class="hl">1.07</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">97</td><td>10/25/2025</td><td class="mono">0.347500</td><td class="mono">0.576687</td><td class="mono">−0.012623</td><td class="mono">−0.222195</td><td class="mono">0.358599</td><td class="mono">−0.011099</td><td class="mono">0.011099</td><td><span class="hl">3.19</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">98</td><td>11/12/2025</td><td class="mono">0.530278</td><td class="mono">0.620587</td><td class="mono">0.026943</td><td class="mono">−0.209006</td><td class="mono">0.341870</td><td class="mono">+0.188408</td><td class="mono">0.188408</td><td><span class="hl">35.53</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">99</td><td>11/12/2025</td><td class="mono">0.414722</td><td class="mono">0.640389</td><td class="mono">0.021945</td><td class="mono">−0.210672</td><td class="mono">0.438524</td><td class="mono">−0.023802</td><td class="mono">0.023802</td><td><span class="hl">5.74</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">100</td><td>12/12/2025</td><td class="mono">0.409722</td><td class="mono">0.649752</td><td class="mono">0.013137</td><td class="mono">−0.213608</td><td class="mono">0.451662</td><td class="mono">−0.041940</td><td class="mono">0.041940</td><td><span class="hl">10.24</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">101</td><td>12/18/2025</td><td class="mono">0.496944</td><td class="mono">0.677188</td><td class="mono">0.023146</td><td class="mono">−0.210272</td><td class="mono">0.449281</td><td class="mono">+0.047663</td><td class="mono">0.047663</td><td><span class="hl">9.59</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">102</td><td>12/18/2025</td><td class="mono">0.324444</td><td class="mono">0.650649</td><td class="mono">−0.011634</td><td class="mono">−0.221865</td><td class="mono">0.490063</td><td class="mono">−0.165619</td><td class="mono">0.165619</td><td><span class="hl">51.05</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">103</td><td>12/21/2025</td><td class="mono">0.880833</td><td class="mono">0.778120</td><td class="mono">0.085740</td><td class="mono">−0.189407</td><td class="mono">0.417150</td><td class="mono">+0.463683</td><td class="mono">0.463683</td><td><span class="hl">52.64</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">104</td><td>12/21/2025</td><td class="mono">0.298611</td><td class="mono">0.751107</td><td class="mono">0.006813</td><td class="mono">−0.215716</td><td class="mono">0.674453</td><td class="mono">−0.375842</td><td class="mono">0.375842</td><td><span class="hl">125.86</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">105</td><td>12/21/2025</td><td class="mono">0.820833</td><td class="mono">0.841509</td><td class="mono">0.065325</td><td class="mono">−0.196212</td><td class="mono">0.542204</td><td class="mono">+0.278629</td><td class="mono">0.278629</td><td><span class="hl">33.94</span></td><td><span class="badge te">Testing</span></td></tr>
+        <tr style="background:#fff3e8 !important"><td class="mono">106</td><td>12/27/2025</td><td class="mono">0.558056</td><td class="mono">0.861064</td><td class="mono">0.033286</td><td class="mono">−0.206892</td><td class="mono">0.710622</td><td class="mono">−0.152566</td><td class="mono">0.152566</td><td><span class="hl">27.34</span></td><td><span class="badge te">Testing</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== 4.3.2 EVALUASI AKURASI ===== -->
+<div class="section">
+  <h2 class="section-title">4.3.2 Evaluasi Akurasi Model Peramalan</h2>
+  <p>Setelah memperoleh hasil peramalan Holt-Winters per-record, dilakukan evaluasi akurasi model menggunakan indikator Error, Absolute Error, APE, dan MAPE pada periode data testing (No. 74–106).</p>
+
+  <h3 class="sub-title">Rumus Perhitungan Akurasi</h3>
+  <div class="formula"><div class="label">1. Error</div>Error = Yₜ − Fₜ &nbsp;&nbsp; (selisih aktual dan forecast)</div>
+  <div class="formula"><div class="label">2. Absolute Error</div>|Error| = |Yₜ − Fₜ| &nbsp;&nbsp; (nilai mutlak tanpa tanda)</div>
+  <div class="formula"><div class="label">3. APE (Absolute Percentage Error)</div>APE = (|Yₜ − Fₜ| / Yₜ) × 100%</div>
+  <div class="formula"><div class="label">4. MAPE (Mean Absolute Percentage Error)</div>MAPE = Σ APE / Jumlah Record Testing</div>
+
+  <h3 class="sub-title">Contoh Perhitungan Error — Record No. 74 (Testing Pertama)</h3>
+  <div class="note-box">
+    <strong>Data Record No. 74 (Sabtu, 8/9/2025):</strong>
+    <p>Y₇₄ = 0.617500 &nbsp;|&nbsp; F₇₄ = 0.496246 (forecast dari model)</p>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="step-label">Error</div><div class="step-code">Error = Y₇₄ − F₇₄ = 0.617500 − 0.496246 = <strong>+0.121254</strong></div></div>
+    <div class="step"><div class="step-label">Absolute Error</div><div class="step-code">|Error| = |+0.121254| = <strong>0.121254</strong></div></div>
+    <div class="step"><div class="step-label">APE</div><div class="step-code">APE = (0.121254 / 0.617500) × 100% = <strong>19.64%</strong></div></div>
+  </div>
+  <div class="info-box">
+    <strong>Interpretasi:</strong>
+    <p>Nilai APE 19.64% pada record pertama testing menunjukkan bahwa model memprediksi durasi pekerjaan tanggal 8 Agustus 2025 dengan selisih sekitar 19.64% dari nilai aktualnya. Model meramalkan pekerjaan akan selesai dalam 0.496 jam, sedangkan kenyataannya 0.617 jam.</p>
+  </div>
+
+  <h3 class="sub-title">Tabel Hasil Evaluasi — Data Testing (Record No. 74–106)</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>No (t)</th><th>Tanggal</th><th>Bulan</th><th>Yₜ (Aktual)</th><th>Fₜ (Forecast)</th><th>Error</th><th>|Error|</th><th>APE (%)</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">74</td><td>8/9/2025</td><td>Bulan 8</td><td class="mono">0.617500</td><td class="mono">0.496246</td><td class="mono">+0.121254</td><td class="mono">0.121254</td><td><span class="hl">19.64</span></td></tr>
+        <tr><td class="mono">75</td><td>8/9/2025</td><td>Bulan 8</td><td class="mono">0.688889</td><td class="mono">0.633051</td><td class="mono">+0.055838</td><td class="mono">0.055838</td><td><span class="hl">8.11</span></td></tr>
+        <tr><td class="mono">76</td><td>8/9/2025</td><td>Bulan 8</td><td class="mono">0.649722</td><td class="mono">0.757377</td><td class="mono">−0.107655</td><td class="mono">0.107655</td><td><span class="hl">16.57</span></td></tr>
+        <tr><td class="mono">77</td><td>8/12/2025</td><td>Bulan 8</td><td class="mono">0.321389</td><td class="mono">0.798604</td><td class="mono">−0.477215</td><td class="mono">0.477215</td><td><span class="hl">148.49</span></td></tr>
+        <tr><td class="mono">78</td><td>8/12/2025</td><td>Bulan 8</td><td class="mono">0.267222</td><td class="mono">0.602878</td><td class="mono">−0.335656</td><td class="mono">0.335656</td><td><span class="hl">125.61</span></td></tr>
+        <tr><td class="mono">79</td><td>8/15/2025</td><td>Bulan 8</td><td class="mono">0.156389</td><td class="mono">0.389041</td><td class="mono">−0.232652</td><td class="mono">0.232652</td><td><span class="hl">148.77</span></td></tr>
+        <tr><td class="mono">80</td><td>8/15/2025</td><td>Bulan 8</td><td class="mono">0.425278</td><td class="mono">0.164459</td><td class="mono">+0.260819</td><td class="mono">0.260819</td><td><span class="hl">61.33</span></td></tr>
+        <tr><td class="mono">81</td><td>8/18/2025</td><td>Bulan 8</td><td class="mono">0.162500</td><td class="mono">0.177233</td><td class="mono">−0.014733</td><td class="mono">0.014733</td><td><span class="hl">9.07</span></td></tr>
+        <tr><td class="mono">82</td><td>8/21/2025</td><td>Bulan 8</td><td class="mono">0.210556</td><td class="mono">0.084959</td><td class="mono">+0.125597</td><td class="mono">0.125597</td><td><span class="hl">59.65</span></td></tr>
+        <tr><td class="mono">83</td><td>8/27/2025</td><td>Bulan 8</td><td class="mono">0.419444</td><td class="mono">0.070982</td><td class="mono">+0.348462</td><td class="mono">0.348462</td><td><span class="hl">83.08</span></td></tr>
+        <tr><td class="mono">84</td><td>8/30/2025</td><td>Bulan 8</td><td class="mono">0.131389</td><td class="mono">0.212643</td><td class="mono">−0.081254</td><td class="mono">0.081254</td><td><span class="hl">61.84</span></td></tr>
+        <tr><td class="mono">85</td><td>9/3/2025</td><td>Bulan 9</td><td class="mono">0.363611</td><td class="mono">0.178245</td><td class="mono">+0.185366</td><td class="mono">0.185366</td><td><span class="hl">50.98</span></td></tr>
+        <tr><td class="mono">86</td><td>9/12/2025</td><td>Bulan 9</td><td class="mono">0.128333</td><td class="mono">0.281423</td><td class="mono">−0.153090</td><td class="mono">0.153090</td><td><span class="hl">119.29</span></td></tr>
+        <tr><td class="mono">87</td><td>9/21/2025</td><td>Bulan 9</td><td class="mono">0.351944</td><td class="mono">0.227224</td><td class="mono">+0.124720</td><td class="mono">0.124720</td><td><span class="hl">35.44</span></td></tr>
+        <tr><td class="mono">88</td><td>9/27/2025</td><td>Bulan 9</td><td class="mono">0.282222</td><td class="mono">0.302006</td><td class="mono">−0.019784</td><td class="mono">0.019784</td><td><span class="hl">7.01</span></td></tr>
+        <tr><td class="mono">89</td><td>9/27/2025</td><td>Bulan 9</td><td class="mono">0.364444</td><td class="mono">0.319166</td><td class="mono">+0.045278</td><td class="mono">0.045278</td><td><span class="hl">12.42</span></td></tr>
+        <tr><td class="mono">90</td><td>10/10/2025</td><td>Bulan 10</td><td class="mono">0.205833</td><td class="mono">0.369908</td><td class="mono">−0.164075</td><td class="mono">0.164075</td><td><span class="hl">79.71</span></td></tr>
+        <tr><td class="mono">91</td><td>10/13/2025</td><td class="mono">0.603889</td><td class="mono">0.308734</td><td class="mono">+0.295155</td><td class="mono">0.295155</td><td><span class="hl">48.88</span></td></tr>
+        <tr><td class="mono">92</td><td>10/16/2025</td><td class="mono">0.256389</td><td class="mono">0.479457</td><td class="mono">−0.223068</td><td class="mono">0.223068</td><td><span class="hl">87.00</span></td></tr>
+        <tr><td class="mono">93</td><td>10/19/2025</td><td class="mono">0.209167</td><td class="mono">0.411593</td><td class="mono">−0.202426</td><td class="mono">0.202426</td><td><span class="hl">96.78</span></td></tr>
+        <tr><td class="mono">94</td><td>10/19/2025</td><td class="mono">0.633056</td><td class="mono">0.308858</td><td class="mono">+0.324198</td><td class="mono">0.324198</td><td><span class="hl">51.21</span></td></tr>
+        <tr><td class="mono">95</td><td>10/22/2025</td><td class="mono">0.224444</td><td class="mono">0.469055</td><td class="mono">−0.244611</td><td class="mono">0.244611</td><td><span class="hl">108.99</span></td></tr>
+        <tr><td class="mono">96</td><td>10/22/2025</td><td class="mono">0.371389</td><td class="mono">0.367424</td><td class="mono">+0.003965</td><td class="mono">0.003965</td><td><span class="hl">1.07</span></td></tr>
+        <tr><td class="mono">97</td><td>10/25/2025</td><td class="mono">0.347500</td><td class="mono">0.358599</td><td class="mono">−0.011099</td><td class="mono">0.011099</td><td><span class="hl">3.19</span></td></tr>
+        <tr><td class="mono">98</td><td>11/12/2025</td><td>Bulan 11</td><td class="mono">0.530278</td><td class="mono">0.341870</td><td class="mono">+0.188408</td><td class="mono">0.188408</td><td><span class="hl">35.53</span></td></tr>
+        <tr><td class="mono">99</td><td>11/12/2025</td><td>Bulan 11</td><td class="mono">0.414722</td><td class="mono">0.438524</td><td class="mono">−0.023802</td><td class="mono">0.023802</td><td><span class="hl">5.74</span></td></tr>
+        <tr><td class="mono">100</td><td>12/12/2025</td><td>Bulan 12</td><td class="mono">0.409722</td><td class="mono">0.451662</td><td class="mono">−0.041940</td><td class="mono">0.041940</td><td><span class="hl">10.24</span></td></tr>
+        <tr><td class="mono">101</td><td>12/18/2025</td><td>Bulan 12</td><td class="mono">0.496944</td><td class="mono">0.449281</td><td class="mono">+0.047663</td><td class="mono">0.047663</td><td><span class="hl">9.59</span></td></tr>
+        <tr><td class="mono">102</td><td>12/18/2025</td><td>Bulan 12</td><td class="mono">0.324444</td><td class="mono">0.490063</td><td class="mono">−0.165619</td><td class="mono">0.165619</td><td><span class="hl">51.05</span></td></tr>
+        <tr><td class="mono">103</td><td>12/21/2025</td><td>Bulan 12</td><td class="mono">0.880833</td><td class="mono">0.417150</td><td class="mono">+0.463683</td><td class="mono">0.463683</td><td><span class="hl">52.64</span></td></tr>
+        <tr><td class="mono">104</td><td>12/21/2025</td><td>Bulan 12</td><td class="mono">0.298611</td><td class="mono">0.674453</td><td class="mono">−0.375842</td><td class="mono">0.375842</td><td><span class="hl">125.86</span></td></tr>
+        <tr><td class="mono">105</td><td>12/21/2025</td><td>Bulan 12</td><td class="mono">0.820833</td><td class="mono">0.542204</td><td class="mono">+0.278629</td><td class="mono">0.278629</td><td><span class="hl">33.94</span></td></tr>
+        <tr><td class="mono">106</td><td>12/27/2025</td><td>Bulan 12</td><td class="mono">0.558056</td><td class="mono">0.710622</td><td class="mono">−0.152566</td><td class="mono">0.152566</td><td><span class="hl">27.34</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="sub-title">Cara Menghitung MAPE</h3>
+  <div class="formula"><div class="label">Rumus MAPE</div>MAPE = Σ APE ÷ Jumlah Record Testing</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-label">Langkah 1 — Total Σ APE</div>
+      <div class="step-code">Σ APE = 19.64 + 8.11 + 16.57 + 148.49 + 125.61 + 148.77 + 61.33 + 9.07 + 59.65 + 83.08 + 61.84 + 50.98 + 119.29 + 35.44 + 7.01 + 12.42 + 79.71 + 48.88 + 87.00 + 96.78 + 51.21 + 108.99 + 1.07 + 3.19 + 35.53 + 5.74 + 10.24 + 9.59 + 51.05 + 52.64 + 125.86 + 33.94 + 27.34</div>
+      <div class="step-code">Σ APE = <strong>1796.04%</strong></div>
+    </div>
+    <div class="step">
+      <div class="step-label">Langkah 2 — Jumlah Record Testing</div>
+      <div class="step-code">Jumlah record testing = 33 record (No. 74 – 106)</div>
+    </div>
+    <div class="step">
+      <div class="step-label">Langkah 3 — Hitung MAPE</div>
+      <div class="step-code">MAPE = 1796.04 ÷ 33 = <strong>54.43%</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAPE HERO -->
+<div class="mape-hero">
+  <h2>Nilai MAPE — Peramalan Per-Record</h2>
+  <div class="big">54.43%</div>
+  <div class="interpret">
+    <h3 style="color:#fff;margin-bottom:1rem;font-family:'Crimson Pro',serif">Interpretasi Hasil</h3>
+    <p>Nilai MAPE 54.43% diperoleh dari evaluasi 33 record testing (No. 74–106). Nilai ini menunjukkan bahwa rata-rata penyimpangan prediksi model per-record adalah sekitar 54.43% dari nilai aktual.</p>
+    <p style="margin-top:.75rem">Tingginya nilai MAPE dalam pendekatan per-record ini disebabkan oleh <strong>variabilitas durasi pekerjaan yang sangat tinggi antar-record</strong> — durasi bisa berkisar dari beberapa menit hingga hampir satu jam dalam satu hari yang sama, sehingga pola sulit diprediksi secara akurat per-transaksi.</p>
+    <div style="margin-top:1.25rem;padding:1rem;background:rgba(255,255,255,.12);border-radius:8px">
+      <strong>Kategori Akurasi MAPE:</strong><br>
+      • &lt; 10% = Sangat Baik<br>
+      • 10% – 20% = Baik<br>
+      • 20% – 50% = Cukup Baik<br>
+      • &gt; 50% = Perlu Perbaikan ← <strong>Posisi Model Ini (54.43%)</strong>
+    </div>
+    <p style="margin-top:1rem;font-size:.95rem;opacity:.85">Catatan: Pendekatan per-record lebih cocok jika ada pola yang konsisten antar-transaksi. Jika variabilitas terlalu tinggi, pendekatan per-bulan cenderung memberikan akurasi yang lebih baik.</p>
+  </div>
+</div>
+
+<!-- KESIMPULAN -->
+<div class="section" style="text-align:center">
+  <h2 class="section-title" style="display:block;text-align:left">Kesimpulan</h2>
+  <p style="max-width:800px;margin:0 auto 1.5rem;font-size:1.05rem;line-height:1.8;text-align:left">
+    Model Triple Exponential Smoothing (Holt-Winters) telah berhasil diimplementasikan untuk peramalan durasi perbaikan meteran per-record di PLN Galesong. Total 105 record dari Januari–Desember 2025 dianalisis, dengan 73 record digunakan untuk training dan 33 record untuk testing. Nilai MAPE yang diperoleh sebesar <strong>54.43%</strong> menunjukkan bahwa variabilitas durasi antar-pekerjaan harian cukup tinggi. Model ini memberikan gambaran awal tentang pola durasi per-transaksi yang dapat dikembangkan lebih lanjut.
+  </p>
+  <button onclick="window.scrollTo({top:0,behavior:'smooth'})" class="top-btn show" style="position:static;opacity:1;margin:.5rem">↑ Kembali ke Atas</button>
+  <button onclick="window.print()" class="top-btn show" style="position:static;opacity:1;margin:.5rem">🖨 Cetak</button>
+</div>
+
+</div><!-- /container -->
+
+<button class="top-btn" id="topBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+window.addEventListener('scroll',()=>{
+  document.getElementById('topBtn').classList.toggle('show',window.pageYOffset>400)
+});
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+  if(e.isIntersecting){e.target.style.animationPlayState='running'}
+}),{threshold:.1});
+document.querySelectorAll('.section').forEach(s=>{
+  s.style.animationPlayState='paused';obs.observe(s)
+});
+</script>
+</body>
+</html>

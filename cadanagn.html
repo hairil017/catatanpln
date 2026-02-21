@@ -229,7 +229,7 @@ footer strong{color:var(--ink)}
 
 <!-- ─── INTRO ─── -->
 <p class="prose" style="margin-top:8px">
-  Berikut merupakan contoh perhitungan metode Triple Exponential Smoothing (Holt-Winters Additive) pada jenis kegiatan <strong>Perbaikan Meteran</strong> untuk Kelompok 1. Untuk menjamin akurasi model, data dibagi menjadi dua bagian: <strong>80% Data Training</strong> (65 data) untuk melatih model dan <strong>20% Data Testing</strong> (16 data) untuk menguji keakurasi prediksi model.
+  Berikut merupakan contoh perhitungan metode Triple Exponential Smoothing (Holt-Winters Additive) pada jenis kegiatan <strong>Perbaikan Meteran</strong> untuk Kelompok 1. Perhitungan ini bertujuan untuk menunjukkan bagaimana model melakukan prediksi terhadap data yang tidak digunakan dalam proses pelatihan (<em>training</em>).
 </p>
 
 <!-- ═══════════════════════════════════════
@@ -237,8 +237,8 @@ footer strong{color:var(--ink)}
 ════════════════════════════════════════ -->
 <div id="data-masukan"></div>
 <div class="sec-num" style="background:var(--ink)">0</div>
-<h2 class="sec-title">4.3.1 Data Masukan — Laporan Harian PLN Galesong</h2>
-<p class="sec-desc">Tahap awal adalah menyiapkan data mentah. Sesuai arahan, kita menggunakan <strong>80% data sebagai Training Set</strong> untuk membentuk pola forecasting awal.</p>
+<h2 class="sec-title">Data Masukan — Laporan Harian PLN Galesong</h2>
+<p class="sec-desc">Sebelum melakukan perhitungan forecasting, kita perlu menyiapkan data mentah yang akan digunakan sebagai input model Triple Exponential Smoothing.</p>
 
 <div class="card">
   <h3 style="font-family:'Playfair Display',serif;margin-bottom:14px">📋 Sumber Data</h3>
@@ -281,9 +281,11 @@ footer strong{color:var(--ink)}
     <div class="eq">Durasi (Jam) = Jam + (Menit ÷ 60) + (Detik ÷ 3600)</div>
   </div>
   <p class="prose"><strong>Contoh:</strong> Durasi 0:28:10 dikonversi ke jam</p>
+  <div class="calc">
+    <div class="calc-row">= 0 + (28 ÷ 60) + (10 ÷ 3600)</div>
+    <div class="calc-row">= 0 + 0.4667 + 0.0028</div>
     <div class="calc-row">= <span class="ans">0.4694 jam</span></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai 0.4694 jam ini menunjukkan bahwa pekerjaan perbaikan meteran tersebut diselesaikan dalam waktu hampir setengah jam, tepatnya 28 menit 10 detik setelah dikonversi ke format desimal untuk perhitungan matematis.</p>
 </div>
 
 <!-- Tabel Data Lengkap 81 baris -->
@@ -295,108 +297,105 @@ footer strong{color:var(--ink)}
     <table style="font-size:.8rem">
       <thead>
         <tr>
-          <th>No</th><th>Status</th><th>Hari</th><th>Jenis Kegiatan</th><th>Tanggal</th>
+          <th>No</th><th>Hari</th><th>Jenis Kegiatan</th><th>Tanggal</th>
           <th>Waktu Mulai</th><th>Waktu Selesai</th><th>Durasi<br>(H:MM:SS)</th>
           <th>Durasi<br>(Jam)</th><th>Bulan</th>
         </tr>
       </thead>
       <tbody>
-        <!-- 80% DATA TRAINING (No 1-65) -->
-        <tr><td>1</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>1/1/2025</td><td>8:19:22</td><td>8:25:39</td><td>0:06:17</td><td>0.104722</td><td>Bulan 1</td></tr>
-        <tr><td>2</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>1/1/2025</td><td>14:44:23</td><td>15:12:33</td><td>0:28:10</td><td>0.469444</td><td>Bulan 1</td></tr>
-        <tr><td>3</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>1/10/2025</td><td>10:24:52</td><td>10:55:26</td><td>0:30:34</td><td>0.509444</td><td>Bulan 1</td></tr>
-        <tr><td>4</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>1/17/2025</td><td>8:43:53</td><td>8:52:18</td><td>0:08:25</td><td>0.140278</td><td>Bulan 1</td></tr>
-        <tr><td>5</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>1/20/2025</td><td>11:22:34</td><td>11:45:51</td><td>0:23:17</td><td>0.388056</td><td>Bulan 1</td></tr>
-        <tr><td>6</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>2/4/2025</td><td>17:40:13</td><td>17:51:55</td><td>0:11:42</td><td>0.195000</td><td>Bulan 2</td></tr>
-        <tr><td>7</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>2/7/2025</td><td>16:56:38</td><td>17:33:01</td><td>0:36:23</td><td>0.606389</td><td>Bulan 2</td></tr>
-        <tr><td>8</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>2/10/2025</td><td>8:34:23</td><td>8:56:29</td><td>0:22:06</td><td>0.368333</td><td>Bulan 2</td></tr>
-        <tr><td>9</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>2/10/2025</td><td>9:22:38</td><td>9:53:28</td><td>0:30:50</td><td>0.513889</td><td>Bulan 2</td></tr>
-        <tr><td>10</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>2/13/2025</td><td>8:35:20</td><td>8:46:44</td><td>0:11:24</td><td>0.190000</td><td>Bulan 2</td></tr>
-        <tr><td>11</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>2/13/2025</td><td>9:12:29</td><td>9:43:33</td><td>0:31:04</td><td>0.517778</td><td>Bulan 2</td></tr>
-        <tr><td>12</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/16/2025</td><td>8:26:10</td><td>8:45:19</td><td>0:19:09</td><td>0.319167</td><td>Bulan 2</td></tr>
-        <tr><td>13</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/23/2025</td><td>16:08:50</td><td>16:31:11</td><td>0:22:21</td><td>0.372500</td><td>Bulan 2</td></tr>
-        <tr><td>14</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/23/2025</td><td>18:04:03</td><td>18:13:13</td><td>0:09:10</td><td>0.152778</td><td>Bulan 2</td></tr>
-        <tr><td>15</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>3/1/2025</td><td>10:03:34</td><td>10:28:32</td><td>0:24:58</td><td>0.416111</td><td>Bulan 3</td></tr>
-        <tr><td>16</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>1:13:33</td><td>1:40:17</td><td>0:26:44</td><td>0.445556</td><td>Bulan 3</td></tr>
-        <tr><td>17</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>12:58:35</td><td>13:15:37</td><td>0:17:02</td><td>0.283889</td><td>Bulan 3</td></tr>
-        <tr><td>18</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>19:41:06</td><td>20:05:07</td><td>0:24:01</td><td>0.400278</td><td>Bulan 3</td></tr>
-        <tr><td>19</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>3/7/2025</td><td>21:21:55</td><td>22:18:21</td><td>0:56:26</td><td>0.940556</td><td>Bulan 3</td></tr>
-        <tr><td>20</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/10/2025</td><td>14:06:42</td><td>14:31:31</td><td>0:24:49</td><td>0.413611</td><td>Bulan 3</td></tr>
-        <tr><td>21</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>3/13/2025</td><td>10:50:32</td><td>11:06:50</td><td>0:16:18</td><td>0.271667</td><td>Bulan 3</td></tr>
-        <tr><td>22</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>1:09:53</td><td>1:18:38</td><td>0:08:45</td><td>0.145833</td><td>Bulan 3</td></tr>
-        <tr><td>23</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>10:47:47</td><td>11:07:08</td><td>0:19:21</td><td>0.322500</td><td>Bulan 3</td></tr>
-        <tr><td>24</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>15:57:31</td><td>16:26:04</td><td>0:28:33</td><td>0.475833</td><td>Bulan 3</td></tr>
-        <tr><td>25</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>20:48:17</td><td>21:00:50</td><td>0:12:33</td><td>0.209167</td><td>Bulan 3</td></tr>
-        <tr><td>26</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>3/20/2025</td><td>20:32:11</td><td>21:07:46</td><td>0:35:35</td><td>0.593056</td><td>Bulan 3</td></tr>
-        <tr><td>27</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>3/23/2025</td><td>19:56:05</td><td>20:18:58</td><td>0:22:53</td><td>0.381389</td><td>Bulan 3</td></tr>
-        <tr><td>28</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>3/29/2025</td><td>13:55:07</td><td>14:19:04</td><td>0:23:57</td><td>0.399167</td><td>Bulan 3</td></tr>
-        <tr><td>29</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>4/1/2025</td><td>10:12:51</td><td>10:29:13</td><td>0:16:22</td><td>0.272778</td><td>Bulan 4</td></tr>
-        <tr><td>30</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>4/4/2025</td><td>10:23:47</td><td>10:44:58</td><td>0:21:11</td><td>0.353056</td><td>Bulan 4</td></tr>
-        <tr><td>31</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>4/7/2025</td><td>8:23:33</td><td>8:55:19</td><td>0:31:46</td><td>0.529444</td><td>Bulan 4</td></tr>
-        <tr><td>32</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>4/7/2025</td><td>14:33:10</td><td>14:50:18</td><td>0:17:08</td><td>0.285556</td><td>Bulan 4</td></tr>
-        <tr><td>33</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>4/10/2025</td><td>15:24:18</td><td>15:54:06</td><td>0:29:48</td><td>0.496667</td><td>Bulan 4</td></tr>
-        <tr><td>34</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>4/13/2025</td><td>9:08:07</td><td>9:20:34</td><td>0:12:27</td><td>0.207500</td><td>Bulan 4</td></tr>
-        <tr><td>35</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>4/17/2025</td><td>11:18:05</td><td>11:26:13</td><td>0:08:08</td><td>0.135556</td><td>Bulan 4</td></tr>
-        <tr><td>36</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>4/29/2025</td><td>15:39:37</td><td>15:46:55</td><td>0:07:18</td><td>0.121667</td><td>Bulan 4</td></tr>
-        <tr><td>37</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>10:01:43</td><td>10:17:36</td><td>0:15:53</td><td>0.264722</td><td>Bulan 5</td></tr>
-        <tr><td>38</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>8:58:51</td><td>9:18:09</td><td>0:19:18</td><td>0.321667</td><td>Bulan 5</td></tr>
-        <tr><td>39</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>18:14:51</td><td>18:30:34</td><td>0:15:43</td><td>0.261944</td><td>Bulan 5</td></tr>
-        <tr><td>40</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>5/5/2025</td><td>8:33:29</td><td>8:49:11</td><td>0:15:42</td><td>0.261667</td><td>Bulan 5</td></tr>
-        <tr><td>41</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>5/8/2025</td><td>18:19:08</td><td>18:39:43</td><td>0:20:35</td><td>0.343056</td><td>Bulan 5</td></tr>
-        <tr><td>42</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/23/2025</td><td>9:56:33</td><td>10:15:19</td><td>0:18:46</td><td>0.312778</td><td>Bulan 5</td></tr>
-        <tr><td>43</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/23/2025</td><td>14:50:04</td><td>14:58:48</td><td>0:08:44</td><td>0.145556</td><td>Bulan 5</td></tr>
-        <tr><td>44</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>6/2/2025</td><td>9:33:19</td><td>10:13:18</td><td>0:39:59</td><td>0.666389</td><td>Bulan 6</td></tr>
-        <tr><td>45</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>6/8/2025</td><td>13:38:24</td><td>14:01:08</td><td>0:22:44</td><td>0.378889</td><td>Bulan 6</td></tr>
-        <tr><td>46</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>6/20/2025</td><td>9:23:47</td><td>9:43:54</td><td>0:20:07</td><td>0.335278</td><td>Bulan 6</td></tr>
-        <tr><td>47</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>6/20/2025</td><td>16:38:06</td><td>16:51:51</td><td>0:13:45</td><td>0.229167</td><td>Bulan 6</td></tr>
-        <tr><td>48</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>6/25/2025</td><td>14:32:05</td><td>14:54:32</td><td>0:22:27</td><td>0.374167</td><td>Bulan 6</td></tr>
-        <tr class="empty"><td>—</td><td><span class="badge badge-empty">Kosong</span></td><td colspan="8" style="text-align:center;color:var(--rust);font-weight:600">— Bulan 7 (Juli): Tidak ada data perbaikan meteran —</td></tr>
-        <tr><td>49</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>11:52:26</td><td>12:29:29</td><td>0:37:03</td><td>0.617500</td><td>Bulan 8</td></tr>
-        <tr><td>50</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>13:39:43</td><td>14:21:03</td><td>0:41:20</td><td>0.688889</td><td>Bulan 8</td></tr>
-        <tr><td>51</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>17:27:33</td><td>18:06:32</td><td>0:38:59</td><td>0.649722</td><td>Bulan 8</td></tr>
-        <tr><td>52</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>8/12/2025</td><td>9:36:01</td><td>9:55:18</td><td>0:19:17</td><td>0.321389</td><td>Bulan 8</td></tr>
-        <tr><td>53</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>8/12/2025</td><td>12:18:41</td><td>12:34:43</td><td>0:16:02</td><td>0.267222</td><td>Bulan 8</td></tr>
-        <tr><td>54</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>8/15/2025</td><td>14:32:17</td><td>14:41:40</td><td>0:09:23</td><td>0.156389</td><td>Bulan 8</td></tr>
-        <tr><td>55</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>8/15/2025</td><td>15:30:52</td><td>15:56:23</td><td>0:25:31</td><td>0.425278</td><td>Bulan 8</td></tr>
-        <tr><td>56</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>8/18/2025</td><td>9:12:44</td><td>9:22:29</td><td>0:09:45</td><td>0.162500</td><td>Bulan 8</td></tr>
-        <tr><td>57</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>8/21/2025</td><td>10:28:46</td><td>10:41:24</td><td>0:12:38</td><td>0.210556</td><td>Bulan 8</td></tr>
-        <tr><td>58</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>8/27/2025</td><td>16:25:47</td><td>16:50:57</td><td>0:25:10</td><td>0.419444</td><td>Bulan 8</td></tr>
-        <tr><td>59</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/30/2025</td><td>7:52:51</td><td>8:00:44</td><td>0:07:53</td><td>0.131389</td><td>Bulan 8</td></tr>
-        <tr><td>60</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>9/3/2025</td><td>12:08:38</td><td>12:30:27</td><td>0:21:49</td><td>0.363611</td><td>Bulan 9</td></tr>
-        <tr><td>61</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>9/12/2025</td><td>12:36:39</td><td>12:44:21</td><td>0:07:42</td><td>0.128333</td><td>Bulan 9</td></tr>
-        <tr><td>62</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>9/21/2025</td><td>8:24:25</td><td>8:45:32</td><td>0:21:07</td><td>0.351944</td><td>Bulan 9</td></tr>
-        <tr><td>63</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>9/27/2025</td><td>15:09:54</td><td>15:26:50</td><td>0:16:56</td><td>0.282222</td><td>Bulan 9</td></tr>
-        <tr><td>64</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>9/27/2025</td><td>16:54:39</td><td>17:16:31</td><td>0:21:52</td><td>0.364444</td><td>Bulan 9</td></tr>
-        <tr><td>65</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>10/10/2025</td><td>13:38:57</td><td>13:51:18</td><td>0:12:21</td><td>0.205833</td><td>Bulan 10</td></tr>
-
-        <!-- 20% DATA TESTING (No 66-81) -->
-        <tr><td>66</td><td><span class="badge badge-test">Testing</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>10/13/2025</td><td>10:06:50</td><td>10:43:04</td><td>0:36:14</td><td>0.603889</td><td>Bulan 10</td></tr>
-        <tr><td>67</td><td><span class="badge badge-test">Testing</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>10/16/2025</td><td>9:10:53</td><td>9:26:16</td><td>0:15:23</td><td>0.256389</td><td>Bulan 10</td></tr>
-        <tr><td>68</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>10/19/2025</td><td>9:13:14</td><td>9:25:47</td><td>0:12:33</td><td>0.209167</td><td>Bulan 10</td></tr>
-        <tr><td>69</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>10/19/2025</td><td>15:16:22</td><td>15:54:21</td><td>0:37:59</td><td>0.633056</td><td>Bulan 10</td></tr>
-        <tr><td>70</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>10/22/2025</td><td>9:20:56</td><td>9:34:24</td><td>0:13:28</td><td>0.224444</td><td>Bulan 10</td></tr>
-        <tr><td>71</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>10/22/2025</td><td>9:33:10</td><td>9:55:27</td><td>0:22:17</td><td>0.371389</td><td>Bulan 10</td></tr>
-        <tr><td>72</td><td><span class="badge badge-test">Testing</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>10/25/2025</td><td>12:15:28</td><td>12:36:19</td><td>0:20:51</td><td>0.347500</td><td>Bulan 10</td></tr>
-        <tr><td>73</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>11/12/2025</td><td>7:22:43</td><td>7:54:32</td><td>0:31:49</td><td>0.530278</td><td>Bulan 11</td></tr>
-        <tr><td>74</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>11/12/2025</td><td>13:03:18</td><td>13:28:11</td><td>0:24:53</td><td>0.414722</td><td>Bulan 11</td></tr>
-        <tr><td>75</td><td><span class="badge badge-test">Testing</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>12/12/2025</td><td>9:13:36</td><td>9:38:11</td><td>0:24:35</td><td>0.409722</td><td>Bulan 12</td></tr>
-        <tr><td>76</td><td><span class="badge badge-test">Testing</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>12/18/2025</td><td>15:12:47</td><td>15:42:36</td><td>0:29:49</td><td>0.496944</td><td>Bulan 12</td></tr>
-        <tr><td>77</td><td><span class="badge badge-test">Testing</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>12/18/2025</td><td>17:34:54</td><td>17:54:22</td><td>0:19:28</td><td>0.324444</td><td>Bulan 12</td></tr>
-        <tr><td>78</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>10:36:01</td><td>11:28:52</td><td>0:52:51</td><td>0.880833</td><td>Bulan 12</td></tr>
-        <tr><td>79</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>12:17:32</td><td>12:35:27</td><td>0:17:55</td><td>0.298611</td><td>Bulan 12</td></tr>
-        <tr><td>80</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>13:37:06</td><td>14:26:21</td><td>0:49:15</td><td>0.820833</td><td>Bulan 12</td></tr>
-        <tr><td>81</td><td><span class="badge badge-test">Testing</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>12/27/2025</td><td>16:14:07</td><td>16:47:36</td><td>0:33:29</td><td>0.558056</td><td>Bulan 12</td></tr>
+        <tr><td>1</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>1/1/2025</td><td>8:19:22</td><td>8:25:39</td><td>0:06:17</td><td>0.104722</td><td>Bulan 1</td></tr>
+        <tr><td>2</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>1/1/2025</td><td>14:44:23</td><td>15:12:33</td><td>0:28:10</td><td>0.469444</td><td>Bulan 1</td></tr>
+        <tr><td>3</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>1/10/2025</td><td>10:24:52</td><td>10:55:26</td><td>0:30:34</td><td>0.509444</td><td>Bulan 1</td></tr>
+        <tr><td>4</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>1/17/2025</td><td>8:43:53</td><td>8:52:18</td><td>0:08:25</td><td>0.140278</td><td>Bulan 1</td></tr>
+        <tr><td>5</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>1/20/2025</td><td>11:22:34</td><td>11:45:51</td><td>0:23:17</td><td>0.388056</td><td>Bulan 1</td></tr>
+        <tr><td>6</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>2/4/2025</td><td>17:40:13</td><td>17:51:55</td><td>0:11:42</td><td>0.195000</td><td>Bulan 2</td></tr>
+        <tr><td>7</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>2/7/2025</td><td>16:56:38</td><td>17:33:01</td><td>0:36:23</td><td>0.606389</td><td>Bulan 2</td></tr>
+        <tr><td>8</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>2/10/2025</td><td>8:34:23</td><td>8:56:29</td><td>0:22:06</td><td>0.368333</td><td>Bulan 2</td></tr>
+        <tr><td>9</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>2/10/2025</td><td>9:22:38</td><td>9:53:28</td><td>0:30:50</td><td>0.513889</td><td>Bulan 2</td></tr>
+        <tr><td>10</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>2/13/2025</td><td>8:35:20</td><td>8:46:44</td><td>0:11:24</td><td>0.190000</td><td>Bulan 2</td></tr>
+        <tr><td>11</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>2/13/2025</td><td>9:12:29</td><td>9:43:33</td><td>0:31:04</td><td>0.517778</td><td>Bulan 2</td></tr>
+        <tr><td>12</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/16/2025</td><td>8:26:10</td><td>8:45:19</td><td>0:19:09</td><td>0.319167</td><td>Bulan 2</td></tr>
+        <tr><td>13</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/23/2025</td><td>16:08:50</td><td>16:31:11</td><td>0:22:21</td><td>0.372500</td><td>Bulan 2</td></tr>
+        <tr><td>14</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/23/2025</td><td>18:04:03</td><td>18:13:13</td><td>0:09:10</td><td>0.152778</td><td>Bulan 2</td></tr>
+        <tr><td>15</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>3/1/2025</td><td>10:03:34</td><td>10:28:32</td><td>0:24:58</td><td>0.416111</td><td>Bulan 3</td></tr>
+        <tr><td>16</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>1:13:33</td><td>1:40:17</td><td>0:26:44</td><td>0.445556</td><td>Bulan 3</td></tr>
+        <tr><td>17</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>12:58:35</td><td>13:15:37</td><td>0:17:02</td><td>0.283889</td><td>Bulan 3</td></tr>
+        <tr><td>18</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>19:41:06</td><td>20:05:07</td><td>0:24:01</td><td>0.400278</td><td>Bulan 3</td></tr>
+        <tr><td>19</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>3/7/2025</td><td>21:21:55</td><td>22:18:21</td><td>0:56:26</td><td>0.940556</td><td>Bulan 3</td></tr>
+        <tr><td>20</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/10/2025</td><td>14:06:42</td><td>14:31:31</td><td>0:24:49</td><td>0.413611</td><td>Bulan 3</td></tr>
+        <tr><td>21</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>3/13/2025</td><td>10:50:32</td><td>11:06:50</td><td>0:16:18</td><td>0.271667</td><td>Bulan 3</td></tr>
+        <tr><td>22</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>1:09:53</td><td>1:18:38</td><td>0:08:45</td><td>0.145833</td><td>Bulan 3</td></tr>
+        <tr><td>23</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>10:47:47</td><td>11:07:08</td><td>0:19:21</td><td>0.322500</td><td>Bulan 3</td></tr>
+        <tr><td>24</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>15:57:31</td><td>16:26:04</td><td>0:28:33</td><td>0.475833</td><td>Bulan 3</td></tr>
+        <tr><td>25</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>20:48:17</td><td>21:00:50</td><td>0:12:33</td><td>0.209167</td><td>Bulan 3</td></tr>
+        <tr><td>26</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>3/20/2025</td><td>20:32:11</td><td>21:07:46</td><td>0:35:35</td><td>0.593056</td><td>Bulan 3</td></tr>
+        <tr><td>27</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>3/23/2025</td><td>19:56:05</td><td>20:18:58</td><td>0:22:53</td><td>0.381389</td><td>Bulan 3</td></tr>
+        <tr><td>28</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>3/29/2025</td><td>13:55:07</td><td>14:19:04</td><td>0:23:57</td><td>0.399167</td><td>Bulan 3</td></tr>
+        <tr><td>29</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>4/1/2025</td><td>10:12:51</td><td>10:29:13</td><td>0:16:22</td><td>0.272778</td><td>Bulan 4</td></tr>
+        <tr><td>30</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>4/4/2025</td><td>10:23:47</td><td>10:44:58</td><td>0:21:11</td><td>0.353056</td><td>Bulan 4</td></tr>
+        <tr><td>31</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>4/7/2025</td><td>8:23:33</td><td>8:55:19</td><td>0:31:46</td><td>0.529444</td><td>Bulan 4</td></tr>
+        <tr><td>32</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>4/7/2025</td><td>14:33:10</td><td>14:50:18</td><td>0:17:08</td><td>0.285556</td><td>Bulan 4</td></tr>
+        <tr><td>33</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>4/10/2025</td><td>15:24:18</td><td>15:54:06</td><td>0:29:48</td><td>0.496667</td><td>Bulan 4</td></tr>
+        <tr><td>34</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>4/13/2025</td><td>9:08:07</td><td>9:20:34</td><td>0:12:27</td><td>0.207500</td><td>Bulan 4</td></tr>
+        <tr><td>35</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>4/17/2025</td><td>11:18:05</td><td>11:26:13</td><td>0:08:08</td><td>0.135556</td><td>Bulan 4</td></tr>
+        <tr><td>36</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>4/29/2025</td><td>15:39:37</td><td>15:46:55</td><td>0:07:18</td><td>0.121667</td><td>Bulan 4</td></tr>
+        <tr><td>37</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>10:01:43</td><td>10:17:36</td><td>0:15:53</td><td>0.264722</td><td>Bulan 5</td></tr>
+        <tr><td>38</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>8:58:51</td><td>9:18:09</td><td>0:19:18</td><td>0.321667</td><td>Bulan 5</td></tr>
+        <tr><td>39</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>18:14:51</td><td>18:30:34</td><td>0:15:43</td><td>0.261944</td><td>Bulan 5</td></tr>
+        <tr><td>40</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>5/5/2025</td><td>8:33:29</td><td>8:49:11</td><td>0:15:42</td><td>0.261667</td><td>Bulan 5</td></tr>
+        <tr><td>41</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>5/8/2025</td><td>18:19:08</td><td>18:39:43</td><td>0:20:35</td><td>0.343056</td><td>Bulan 5</td></tr>
+        <tr><td>42</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/23/2025</td><td>9:56:33</td><td>10:15:19</td><td>0:18:46</td><td>0.312778</td><td>Bulan 5</td></tr>
+        <tr><td>43</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/23/2025</td><td>14:50:04</td><td>14:58:48</td><td>0:08:44</td><td>0.145556</td><td>Bulan 5</td></tr>
+        <tr><td>44</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>6/2/2025</td><td>9:33:19</td><td>10:13:18</td><td>0:39:59</td><td>0.666389</td><td>Bulan 6</td></tr>
+        <tr><td>45</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>6/8/2025</td><td>13:38:24</td><td>14:01:08</td><td>0:22:44</td><td>0.378889</td><td>Bulan 6</td></tr>
+        <tr><td>46</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>6/20/2025</td><td>9:23:47</td><td>9:43:54</td><td>0:20:07</td><td>0.335278</td><td>Bulan 6</td></tr>
+        <tr><td>47</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>6/20/2025</td><td>16:38:06</td><td>16:51:51</td><td>0:13:45</td><td>0.229167</td><td>Bulan 6</td></tr>
+        <tr><td>48</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>6/25/2025</td><td>14:32:05</td><td>14:54:32</td><td>0:22:27</td><td>0.374167</td><td>Bulan 6</td></tr>
+        <tr class="empty"><td colspan="9" style="text-align:center;color:var(--rust);font-weight:600">— Bulan 7 (Juli): Tidak ada data perbaikan meteran —</td></tr>
+        <tr><td>49</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>11:52:26</td><td>12:29:29</td><td>0:37:03</td><td>0.617500</td><td>Bulan 8</td></tr>
+        <tr><td>50</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>13:39:43</td><td>14:21:03</td><td>0:41:20</td><td>0.688889</td><td>Bulan 8</td></tr>
+        <tr><td>51</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>17:27:33</td><td>18:06:32</td><td>0:38:59</td><td>0.649722</td><td>Bulan 8</td></tr>
+        <tr><td>52</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>8/12/2025</td><td>9:36:01</td><td>9:55:18</td><td>0:19:17</td><td>0.321389</td><td>Bulan 8</td></tr>
+        <tr><td>53</td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>8/12/2025</td><td>12:18:41</td><td>12:34:43</td><td>0:16:02</td><td>0.267222</td><td>Bulan 8</td></tr>
+        <tr><td>54</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>8/15/2025</td><td>14:32:17</td><td>14:41:40</td><td>0:09:23</td><td>0.156389</td><td>Bulan 8</td></tr>
+        <tr><td>55</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>8/15/2025</td><td>15:30:52</td><td>15:56:23</td><td>0:25:31</td><td>0.425278</td><td>Bulan 8</td></tr>
+        <tr><td>56</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>8/18/2025</td><td>9:12:44</td><td>9:22:29</td><td>0:09:45</td><td>0.162500</td><td>Bulan 8</td></tr>
+        <tr><td>57</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>8/21/2025</td><td>10:28:46</td><td>10:41:24</td><td>0:12:38</td><td>0.210556</td><td>Bulan 8</td></tr>
+        <tr><td>58</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>8/27/2025</td><td>16:25:47</td><td>16:50:57</td><td>0:25:10</td><td>0.419444</td><td>Bulan 8</td></tr>
+        <tr><td>59</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/30/2025</td><td>7:52:51</td><td>8:00:44</td><td>0:07:53</td><td>0.131389</td><td>Bulan 8</td></tr>
+        <tr><td>60</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>9/3/2025</td><td>12:08:38</td><td>12:30:27</td><td>0:21:49</td><td>0.363611</td><td>Bulan 9</td></tr>
+        <tr><td>61</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>9/12/2025</td><td>12:36:39</td><td>12:44:21</td><td>0:07:42</td><td>0.128333</td><td>Bulan 9</td></tr>
+        <tr><td>62</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>9/21/2025</td><td>8:24:25</td><td>8:45:32</td><td>0:21:07</td><td>0.351944</td><td>Bulan 9</td></tr>
+        <tr><td>63</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>9/27/2025</td><td>15:09:54</td><td>15:26:50</td><td>0:16:56</td><td>0.282222</td><td>Bulan 9</td></tr>
+        <tr><td>64</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>9/27/2025</td><td>16:54:39</td><td>17:16:31</td><td>0:21:52</td><td>0.364444</td><td>Bulan 9</td></tr>
+        <tr><td>65</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>10/10/2025</td><td>13:38:57</td><td>13:51:18</td><td>0:12:21</td><td>0.205833</td><td>Bulan 10</td></tr>
+        <tr><td>66</td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>10/13/2025</td><td>10:06:50</td><td>10:43:04</td><td>0:36:14</td><td>0.603889</td><td>Bulan 10</td></tr>
+        <tr><td>67</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>10/16/2025</td><td>9:10:53</td><td>9:26:16</td><td>0:15:23</td><td>0.256389</td><td>Bulan 10</td></tr>
+        <tr><td>68</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>10/19/2025</td><td>9:13:14</td><td>9:25:47</td><td>0:12:33</td><td>0.209167</td><td>Bulan 10</td></tr>
+        <tr><td>69</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>10/19/2025</td><td>15:16:22</td><td>15:54:21</td><td>0:37:59</td><td>0.633056</td><td>Bulan 10</td></tr>
+        <tr><td>70</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>10/22/2025</td><td>9:20:56</td><td>9:34:24</td><td>0:13:28</td><td>0.224444</td><td>Bulan 10</td></tr>
+        <tr><td>71</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>10/22/2025</td><td>9:33:10</td><td>9:55:27</td><td>0:22:17</td><td>0.371389</td><td>Bulan 10</td></tr>
+        <tr><td>72</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>10/25/2025</td><td>12:15:28</td><td>12:36:19</td><td>0:20:51</td><td>0.347500</td><td>Bulan 10</td></tr>
+        <tr><td>73</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>11/12/2025</td><td>7:22:43</td><td>7:54:32</td><td>0:31:49</td><td>0.530278</td><td>Bulan 11</td></tr>
+        <tr><td>74</td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>11/12/2025</td><td>13:03:18</td><td>13:28:11</td><td>0:24:53</td><td>0.414722</td><td>Bulan 11</td></tr>
+        <tr><td>75</td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>12/12/2025</td><td>9:13:36</td><td>9:38:11</td><td>0:24:35</td><td>0.409722</td><td>Bulan 12</td></tr>
+        <tr><td>76</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>12/18/2025</td><td>15:12:47</td><td>15:42:36</td><td>0:29:49</td><td>0.496944</td><td>Bulan 12</td></tr>
+        <tr><td>77</td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>12/18/2025</td><td>17:34:54</td><td>17:54:22</td><td>0:19:28</td><td>0.324444</td><td>Bulan 12</td></tr>
+        <tr><td>78</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>10:36:01</td><td>11:28:52</td><td>0:52:51</td><td>0.880833</td><td>Bulan 12</td></tr>
+        <tr><td>79</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>12:17:32</td><td>12:35:27</td><td>0:17:55</td><td>0.298611</td><td>Bulan 12</td></tr>
+        <tr><td>80</td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>13:37:06</td><td>14:26:21</td><td>0:49:15</td><td>0.820833</td><td>Bulan 12</td></tr>
+        <tr><td>81</td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>12/27/2025</td><td>16:14:07</td><td>16:47:36</td><td>0:33:29</td><td>0.558056</td><td>Bulan 12</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="note-info" style="margin-top:20px">
-    <strong>📊 Pembagian Dataset (80% Training & 20% Testing):</strong><br>
-    • Total data keseluruhan: <strong>81 pekerjaan</strong><br>
-    • <strong>Data Training (80%):</strong> No. 1 sampai 65 (digunakan untuk membentuk model)<br>
-    • <strong>Data Testing (20%):</strong> No. 66 sampai 81 (digunakan untuk uji akurasi MAPE)<br>
-    • Periode: <strong>Januari – Desember 2025</strong><br>
-    • Bulan tanpa data: <strong>Juli (Bulan 7)</strong>
+    <strong>📊 Ringkasan Dataset:</strong><br>
+    • Total data: <strong>81 pekerjaan perbaikan meteran</strong><br>
+    • Periode: <strong>Januari – Desember 2025</strong> (12 bulan)<br>
+    • Bulan tanpa data: <strong>Juli (Bulan 7)</strong><br>
+    • Data terbanyak: <strong>Maret (14 data)</strong><br>
+    • Data tersedikit: <strong>November (2 data)</strong>
   </div>
 </div>
 
@@ -503,9 +502,9 @@ footer strong{color:var(--ink)}
     <div class="calc-row">= <span class="ans">1.6119 jam</span></div>
     <br>
     <div class="calc-row"><span class="lbl">Langkah 2 — Bagi dengan jumlah data (5):</span></div>
+    <div class="calc-row">Y₁ = 1.6119 ÷ 5</div>
     <div class="calc-row">Y₁ = <span class="ans">0.3224 jam</span></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai 0.3224 jam ini menunjukkan bahwa rata-rata durasi pengerjaan pada bulan pertama adalah sekitar 19 menit 21 detik, yang menjadi titik awal (baseline) untuk perhitungan level pada model forecasting kita.</p>
   <div class="result-row">
     <div class="result-pill"><div class="rlabel">Data Aktual Y₁</div><div class="rval">0.3224</div></div>
   </div>
@@ -529,7 +528,6 @@ footer strong{color:var(--ink)}
   <div class="result-row">
     <div class="result-pill"><div class="rlabel">Level Awal L₀</div><div class="rval">0.3432</div></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai level awal 0.3432 menunjukkan rata-rata dasar durasi pekerjaan (baseline) pada awal periode penelitian, yang berfungsi sebagai jangkar utama sebelum dipengaruhi oleh tren dan musiman.</p>
 </div>
 
 <!-- 3c Tt -->
@@ -557,7 +555,6 @@ footer strong{color:var(--ink)}
   <div class="result-row">
     <div class="result-pill"><div class="rlabel">Trend Awal T₀</div><div class="rval">+0.00872</div></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai tren positif 0.00872 menunjukkan adanya kecenderungan kenaikan durasi pengerjaan yang lambat namun pasti seiring berjalannya waktu, mungkin karena kompleksitas pekerjaan yang bertambah.</p>
 </div>
 
 <!-- 3d St -->
@@ -581,7 +578,6 @@ footer strong{color:var(--ink)}
   <div class="result-row">
     <div class="result-pill"><div class="rlabel">Seasonal Awal S₀</div><div class="rval">−0.0295</div></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai negatif -0.0295 menandakan bahwa pada periode Januari, durasi pekerjaan cenderung sedikit lebih cepat dibandingkan rata-rata tahunan, menunjukkan adanya pola penurunan musiman di awal tahun.</p>
 </div>
 
 <!-- 3e Ft -->
@@ -602,7 +598,6 @@ footer strong{color:var(--ink)}
   <div class="result-row">
     <div class="result-pill"><div class="rlabel">Forecast F₁</div><div class="rval">0.3224</div></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Hasil forecast pertama 0.3224 jam adalah prediksi awal mesin yang menyamakan nilai dengan data aktual pertama, sebagai titik awal pembelajaran algoritma Holt-Winters selanjutnya.</p>
 </div>
 
 <!-- ═══════════════════════════════════════
@@ -701,7 +696,6 @@ footer strong{color:var(--ink)}
     <div class="result-pill"><div class="rlabel">T₁₁</div><div class="rval">+0.02565</div></div>
     <div class="result-pill"><div class="rlabel">S₁₁</div><div class="rval">−0.02387</div></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Hasil prediksi Bulan 11 (0.3382) dibandingkan dengan data aktual (0.4725) menunjukkan model cukup konservatif, dengan kenaikan level yang signifikan (0.4117) merespon lonjakan durasi pekerjaan di lapangan.</p>
 </div>
 
 <!-- Bulan 12 -->
@@ -763,7 +757,6 @@ footer strong{color:var(--ink)}
     <div class="result-pill"><div class="rlabel">T₁₂</div><div class="rval">+0.05250</div></div>
     <div class="result-pill"><div class="rlabel">S₁₂</div><div class="rval">−0.01492</div></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Pada Bulan 12, nilai level mencapai puncaknya di 0.4757, menunjukkan tren pengerjaan di akhir tahun 2025 menjadi jauh lebih lama dibandingkan awal tahun, yang diantisipasi model untuk prediksi periode depan.</p>
 </div>
 
 <!-- Bulan 2 (Training) -->
@@ -923,104 +916,10 @@ footer strong{color:var(--ink)}
   </div>
 </div>
 
-
-<!-- Tabel Testing 20% khusus (Data Mentah) -->
-<div class="card" style="padding:20px">
-  <h3 style="font-family:'Playfair Display',serif;margin-bottom:18px;text-align:center">🔍 Tabulasi Data Testing (20% set — Data Mentah)</h3>
-  <p style="text-align:center;color:var(--ink3);font-size:.92rem;margin-bottom:20px">Tabel di bawah ini menyajikan 16 data terakhir (No. 66–81) dari total dataset yang secara khusus dipisahkan sebagai data uji (Testing). Data ini berfungsi sebagai pembanding utama untuk menguji keandalan hasil prediksi model yang telah dilatih menggunakan data training sebelumnya.</p>
-  
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr><th>No</th><th>Tanggal</th><th>Durasi (Jam)</th><th>Keterangan</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>66</td><td class="name">10/13/2025</td><td>0.6039</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>67</td><td class="name">10/16/2025</td><td>0.2564</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>68</td><td class="name">10/19/2025</td><td>0.2092</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>69</td><td class="name">10/19/2025</td><td>0.6331</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>70</td><td class="name">10/22/2025</td><td>0.2244</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>71</td><td class="name">10/22/2025</td><td>0.3714</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>72</td><td class="name">10/25/2025</td><td>0.3475</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>73</td><td class="name">11/12/2025</td><td>0.5303</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>74</td><td class="name">11/12/2025</td><td>0.4147</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>75</td><td class="name">12/12/2025</td><td>0.4097</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>76</td><td class="name">12/18/2025</td><td>0.4969</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>77</td><td class="name">12/18/2025</td><td>0.3244</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>78</td><td class="name">12/21/2025</td><td>0.8808</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>79</td><td class="name">12/21/2025</td><td>0.2986</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>80</td><td class="name">12/21/2025</td><td>0.8208</td><td><span class="badge badge-test">Testing</span></td></tr>
-        <tr><td>81</td><td class="name">12/27/2025</td><td>0.5581</td><td><span class="badge badge-test">Testing</span></td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Tabel Hasil Perhitungan Data Testing (Summarized) -->
-<div class="card" style="padding:20px">
-  <h3 style="font-family:'Playfair Display',serif;margin-bottom:18px;text-align:center">📊 Tabel Hasil Perhitungan Data Testing (Summarized)</h3>
-  <p style="text-align:center;color:var(--ink3);font-size:.92rem;margin-bottom:20px">Tabel ini menyajikan ringkasan variabel model yang dihitung khusus untuk periode testing. Perlu diperhatikan bahwa Bulan 10 (Oktober) turut dimasukkan ke dalam kelompok ini dikarenakan mayoritas data pada periode tersebut, yakni dari No. 66 hingga 72, termasuk dalam porsi 20% data uji.</p>
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr><th>Bulan</th><th>Nama</th><th>Data Aktual (Yₜ)</th><th>Level (Lₜ)</th><th>Trend (Tₜ)</th><th>Musiman (Sₜ)</th><th>Forecast (Fₜ)</th></tr>
-      </thead>
-      <tbody>
-        <tr class="test"><td>10</td><td class="name">Oktober</td><td>0.3565</td><td>0.3740</td><td>−0.00256</td><td>−0.03328</td><td>0.3315</td></tr>
-        <tr class="test"><td>11</td><td class="name">November</td><td>0.4725</td><td>0.4117</td><td>+0.02565</td><td>−0.02387</td><td>0.3382</td></tr>
-        <tr class="test"><td>12</td><td class="name">Desember</td><td>0.5413</td><td>0.4757</td><td>+0.05250</td><td>−0.01492</td><td>0.4135</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Contoh Langkah Perhitungan Testing -->
-<div class="card">
-  <h3 style="font-family:'Playfair Display',serif;margin-bottom:16px">📐 Langkah Perhitungan Variabel (Bulan 10)</h3>
-  <p class="prose">Sebelum melihat hasil akhir, berikut adalah cara mendapatkan nilai-nilai pada tabel di atas menggunakan rumus Holt-Winters. Kita ambil contoh pada <strong>Bulan 10 (Oktober)</strong>:</p>
-
-  <div class="note-info">
-    <strong>1. Menghitung Data Aktual (Y₁₀):</strong><br>
-    Y₁₀ adalah rata-rata durasi dari data No. 65 sampai 72.<br>
-    Y₁₀ = (0.2058 + 0.6039 + 0.2564 + ... + 0.3475) ÷ 8 = <strong>0.3565</strong>
-  </div>
-
-  <div class="note-info">
-    <strong>2. Menghitung Forecast (F₁₀):</strong><br>
-    F₁₀ = L₉ + T₉ + S₉ = 0.3534 + (−0.00397) + (−0.0179) = <strong>0.3315</strong>
-  </div>
-
-  <div class="note-info">
-    <strong>3. Menghitung Level (L₁₀):</strong><br>
-    L₁₀ = α(Y₁₀ − S₉) + (1−α)(L₉ + T₉) = 0.3(0.3565 − (−0.0179)) + 0.7(0.3534 − 0.00397) = <strong>0.3740</strong>
-  </div>
-
-  <div class="note-info">
-    <strong>4. Menghitung Trend (T₁₀):</strong><br>
-    T₁₀ = β(L₁₀ − L₉) + (1−β)T₉ = 0.7(0.3740 − 0.3534) + 0.3(−0.00397) = <strong>−0.00256</strong>
-  </div>
-
-  <div class="note-info">
-    <strong>5. Menghitung Musiman (S₁₀):</strong><br>
-    S₁₀ = γ(Y₁₀ − L₁₀) + (1−γ)S₉ = 0.1(0.3565 − 0.3740) + 0.9(−0.0179) = <strong>−0.03328</strong>
-  </div>
-</div>
-
-<!-- Contoh Perhitungan Testing -->
+<!-- Contoh perhitungan error Bulan 11 & 12 -->
 <div class="card">
   <h3 style="font-family:'Playfair Display',serif;margin-bottom:14px">Contoh Perhitungan pada Periode Testing</h3>
-  <p class="prose">Setelah mendapatkan nilai variabel (Y, L, T, S, F) di atas, kita dapat menghitung tingkat kesalahan (Error) pada periode testing yaitu <strong>Bulan 10, 11, dan 12</strong> untuk mengukur akurasi model.</p>
-
-  <p class="prose"><strong>Bulan 10 — Oktober</strong></p>
-  <div class="calc">
-    <div class="calc-row"><span class="lbl">Error:</span></div>
-    <div class="calc-row">= Y₁₀ − F₁₀ = 0.3565 − 0.3315 = <span class="ans">+0.0250</span></div>
-    <div class="calc-row"><span class="lbl">Absolute Error:</span></div>
-    <div class="calc-row">= |+0.0250| = <span class="ans">0.0250</span></div>
-    <div class="calc-row"><span class="lbl">APE:</span></div>
-    <div class="calc-row">= (0.0250 ÷ 0.3565) × 100% = <span class="ans">7.01 %</span></div>
-  </div>
-  <p class="note-info"><strong>💡 Penjelasan:</strong> Nilai APE 7.01% ini menunjukkan bahwa model memiliki tingkat akurasi yang sangat tinggi pada bulan Oktober, dengan penyimpangan prediksi hanya sebesar 7.01% dari data aktual di lapangan.</p>
+  <p class="prose">Perhitungan berikut menggunakan data pada <strong>Bulan 11 dan Bulan 12</strong> karena kedua periode tersebut merupakan data testing yang digunakan untuk mengukur kemampuan model dalam melakukan prediksi.</p>
 
   <p class="prose"><strong>Bulan 11 — November</strong></p>
   <div class="calc">
@@ -1031,7 +930,6 @@ footer strong{color:var(--ink)}
     <div class="calc-row"><span class="lbl">APE:</span></div>
     <div class="calc-row">= (0.1343 ÷ 0.4725) × 100% = <span class="ans">28.43 %</span></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan:</strong> Nilai APE 28.43% ini menunjukkan adanya deviasi yang cukup besar pada November, di mana prediksi model meleset karena adanya lonjakan durasi pengerjaan yang cukup signifikan secara mendadak.</p>
 
   <p class="prose" style="margin-top:20px"><strong>Bulan 12 — Desember</strong></p>
   <div class="calc">
@@ -1042,7 +940,33 @@ footer strong{color:var(--ink)}
     <div class="calc-row"><span class="lbl">APE:</span></div>
     <div class="calc-row">= (0.1278 ÷ 0.5413) × 100% = <span class="ans">23.61 %</span></div>
   </div>
-  <p class="note-info"><strong>💡 Penjelasan:</strong> Nilai APE 23.61% ini menunjukkan bahwa meskipun terdapat kesalahan, model masih mampu mengikuti pola kenaikan durasi pengerjaan pada akhir tahun dengan tingkat akurasi yang tetap terjaga.</p>
+</div>
+
+<!-- Tabel Error Lengkap -->
+<blockquote>Setelah dilakukan perhitungan Error, Absolute Error, dan Absolute Percentage Error (APE) pada periode testing yaitu Bulan 11 dan Bulan 12, maka hasil perhitungan secara keseluruhan baik pada data training maupun testing dapat dilihat pada tabel berikut.</blockquote>
+
+<div class="card" style="padding:20px">
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Bulan</th><th>Nama</th><th>Error</th><th>Abs Error</th><th>APE (%)</th><th>Keterangan</th></tr>
+      </thead>
+      <tbody>
+        <tr class="init"><td>1</td><td class="name">Januari</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-init">Inisialisasi</span></td></tr>
+        <tr><td>2</td><td class="name">Februari</td><td>+0.03715</td><td>0.03715</td><td>10.33</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr><td>3</td><td class="name">Maret</td><td>+0.05438</td><td>0.05438</td><td>13.36</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr><td>4</td><td class="name">April</td><td>−0.10045</td><td>0.10045</td><td>33.45</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr><td>5</td><td class="name">Mei</td><td>−0.09736</td><td>0.09736</td><td>35.65</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr><td>6</td><td class="name">Juni</td><td>+0.07598</td><td>0.07598</td><td>19.15</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr class="empty"><td>7</td><td class="name">Juli</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-empty">Kosong</span></td></tr>
+        <tr><td>8</td><td class="name">Agustus</td><td>+0.01694</td><td>0.01694</td><td>4.60</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr><td>9</td><td class="name">September</td><td>−0.06535</td><td>0.06535</td><td>21.92</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr><td>10</td><td class="name">Oktober</td><td>+0.02498</td><td>0.02498</td><td>7.01</td><td><span class="badge badge-train">Training</span></td></tr>
+        <tr class="test"><td>11</td><td class="name">November</td><td>+0.13434</td><td>0.13434</td><td>28.43</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr class="test"><td>12</td><td class="name">Desember</td><td>+0.12783</td><td>0.12783</td><td>23.61</td><td><span class="badge badge-test">Testing</span></td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Perhitungan MAPE Step by Step -->
