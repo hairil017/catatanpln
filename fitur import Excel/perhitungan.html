@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perhitungan Holt-Winters — Perbaikan Meteran PLN Galesong 2025</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --accent: #f0a500;
+    --accent2: #3fb950;
+    --accent3: #58a6ff;
+    --accent4: #ff7b72;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #c9d1d9;
+    --init-bg: #1c2333;
+    --train-bg: #0d1117;
+    --test-bg: #161b22;
+    --init-border: #f0a500;
+    --train-border: #3fb950;
+    --test-border: #58a6ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* ===== HEADER ===== */
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #1a2540 50%, #0d1117 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 56px 48px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(240,165,0,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--text2);
+    margin-bottom: 28px;
+  }
+  .param-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text3);
+  }
+  .badge b { color: var(--accent); }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 32px 64px; }
+
+  /* ===== SECTIONS ===== */
+  .section {
+    margin-top: 48px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    opacity: 0.6;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-desc {
+    color: var(--text2);
+    font-size: 13.5px;
+    margin-bottom: 20px;
+  }
+
+  /* ===== INFO CARDS ===== */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .info-card-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .info-card-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .info-card-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+  .info-card.green .info-card-value { color: var(--accent2); }
+  .info-card.blue .info-card-value { color: var(--accent3); }
+  .info-card.red .info-card-value { color: var(--accent4); }
+
+  /* ===== FORMULA BOX ===== */
+  .formula-box {
+    background: var(--surface2);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 18px 22px;
+    margin: 16px 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text3);
+  }
+  .formula-box .formula-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .formula-line {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .formula-line:last-child { border-bottom: none; }
+  .formula-line .var { color: var(--accent3); }
+  .formula-line .val { color: var(--accent2); }
+  .formula-line .result { color: var(--accent); font-weight: 600; }
+
+  /* ===== STEP BOX ===== */
+  .step-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent3);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .step-title::before {
+    content: '▶';
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  /* ===== TABLES ===== */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-top: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  thead th {
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td {
+    padding: 9px 10px;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+  tbody td.left { text-align: left; }
+
+  /* Row status colors */
+  tr.init { border-left: 3px solid var(--init-border); background: rgba(240,165,0,0.04); }
+  tr.train { border-left: 3px solid var(--train-border); }
+  tr.test  { border-left: 3px solid var(--test-border); background: rgba(88,166,255,0.04); }
+
+  .badge-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badge-init { background: rgba(240,165,0,0.15); color: var(--accent); border: 1px solid rgba(240,165,0,0.3); }
+  .badge-train { background: rgba(63,185,80,0.12); color: var(--accent2); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-test  { background: rgba(88,166,255,0.12); color: var(--accent3); border: 1px solid rgba(88,166,255,0.3); }
+
+  .null-cell { color: var(--text2); }
+
+  /* Positive/negative coloring */
+  .pos { color: var(--accent2); }
+  .neg { color: var(--accent4); }
+
+  /* ===== APE TABLE ===== */
+  .ape-table th { background: #1a2540; }
+  tr.ape-row td { padding: 8px 10px; }
+
+  /* ===== MAPE RESULT ===== */
+  .mape-result {
+    background: linear-gradient(135deg, #1a2540, #1c2333);
+    border: 2px solid var(--accent3);
+    border-radius: 12px;
+    padding: 28px 32px;
+    text-align: center;
+    margin-top: 24px;
+  }
+  .mape-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .mape-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 56px;
+    font-weight: 900;
+    color: var(--accent3);
+    line-height: 1;
+  }
+  .mape-unit {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    color: var(--accent);
+    vertical-align: super;
+  }
+  .mape-interp {
+    margin-top: 12px;
+    font-size: 15px;
+    color: var(--text2);
+  }
+  .mape-interp b { color: var(--accent2); }
+
+  /* ===== PREDICTION BOX ===== */
+  .predict-box {
+    background: linear-gradient(135deg, #1a2a1a, #1a2333);
+    border: 2px solid var(--accent2);
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .predict-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .predict-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--accent2);
+    line-height: 1;
+  }
+  .predict-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  /* ===== LEGEND ===== */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text2);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+  }
+
+  /* ===== SCROLLABLE TABLE CONTAINER ===== */
+  .table-container {
+    max-height: 550px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .table-container table { border: none; border-radius: 0; }
+  .table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    margin-top: 64px;
+    padding: 24px 48px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 1px;
+  }
+
+  /* ===== PRINT ===== */
+  @media print {
+    .table-container { max-height: none; overflow: visible; }
+    body { background: white; color: black; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Laporan Perhitungan Peramalan</div>
+  <h1>Triple Exponential Smoothing<br><span>Holt-Winters</span></h1>
+  <div class="hero-sub">Kegiatan Perbaikan Meteran — PLN Galesong 2025 | Total 97 Record</div>
+  <div class="param-badges">
+    <div class="badge">α (Alpha) = <b>0,3</b></div>
+    <div class="badge">β (Beta) = <b>0,4</b></div>
+    <div class="badge">γ (Gamma) = <b>0,1</b></div>
+    <div class="badge">Training = <b>78 data</b> (No. 1–78)</div>
+    <div class="badge">Testing = <b>19 data</b> (No. 79–97)</div>
+    <div class="badge">Split = <b>80% / 20%</b></div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ===== SECTION 1: DATA INPUT ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div class="section-title">Data Masukan & Konversi Durasi</div>
+  </div>
+  <p class="section-desc">
+    Data mentah mencatat durasi dalam format Waktu Mulai – Waktu Selesai. Konversi dilakukan ke jam desimal menggunakan rumus:
+    <b style="color:var(--accent)">Jam Desimal = Jam + (Menit ÷ 60) + (Detik ÷ 3600)</b>
+  </p>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-label">Total Record</div>
+      <div class="info-card-value">97</div>
+      <div class="info-card-sub">No. 1 s/d No. 97</div>
+    </div>
+    <div class="info-card green">
+      <div class="info-card-label">Data Training</div>
+      <div class="info-card-value">78</div>
+      <div class="info-card-sub">No. 1–78 (80%)</div>
+    </div>
+    <div class="info-card blue">
+      <div class="info-card-label">Data Testing</div>
+      <div class="info-card-value">19</div>
+      <div class="info-card-sub">No. 79–97 (20%)</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Durasi Training (avg)</div>
+      <div class="info-card-value">0,3333</div>
+      <div class="info-card-sub">≈ 20 menit 00 detik</div>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    <div class="formula-title">Contoh Konversi — Record No.79</div>
+    <div class="formula-line">Waktu Mulai: <span class="var">08:12:00</span> &nbsp;|&nbsp; Waktu Selesai: <span class="var">08:33:17</span></div>
+    <div class="formula-line">Durasi = 08:33:17 − 08:12:00 = <span class="var">0:21:17</span></div>
+    <div class="formula-line">Jam Desimal = 0 + (21 ÷ 60) + (17 ÷ 3600) = 0 + 0,350000 + 0,004722 = <span class="result">0,354722 jam</span></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Record Inisialisasi (No.1)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Data Training (No.2–78)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Data Testing (No.79–97)</div>
+  </div>
+
+  <div class="table-container">
+    <table id="tbl-data">
+      <thead>
+        <tr>
+          <th>No</th><th>Hari</th><th>Tanggal</th><th>Nama</th>
+          <th>Waktu Mulai</th><th>Waktu Selesai</th>
+          <th>Durasi (H:MM)</th><th>Yₜ (Jam Desimal)</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-data"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 2: INISIALISASI ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div class="section-title">Inisialisasi Model Holt-Winters</div>
+  </div>
+  <p class="section-desc">Nilai awal Level (L₀), Trend (T₀), dan Seasonal (S₀) dihitung sebelum iterasi dimulai.</p>
+
+  <div class="step-box">
+    <div class="step-title">Perhitungan Level Awal (L₀)</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">Rumus: L₀ = (Y₁ + Y₂ + Y₃ + Y₄ + Y₅) ÷ 5</div>
+      <div class="formula-line">Y₁=<span class="var">0,333333</span>, Y₂=<span class="var">0,333333</span>, Y₃=<span class="var">0,333333</span>, Y₄=<span class="var">0,333333</span>, Y₅=<span class="var">0,333333</span></div>
+      <div class="formula-line">L₀ = (0,333333 + 0,333333 + 0,333333 + 0,333333 + 0,333333) ÷ 5</div>
+      <div class="formula-line">L₀ = <span class="val">1,666667</span> ÷ 5 = <span class="result">0,333333 jam ≈ 20 menit 00 detik</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Perhitungan Trend Awal (T₀)</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">Rumus: T₀ = (Ȳakhir − Ȳawal) ÷ n</div>
+      <div class="formula-line">Ȳawal (rata-rata No.1–5) = <span class="var">0,333333</span></div>
+      <div class="formula-line">Ȳakhir (rata-rata No.74–78) = (0,333333 + 0,333333 + 0,333333 + 0,333333 + 0,333333) ÷ 5 = <span class="var">0,333333</span></div>
+      <div class="formula-line">n (jarak data) = <span class="var">77</span></div>
+      <div class="formula-line">T₀ = (0,333333 − 0,333333) ÷ 77 = <span class="result">0,000000</span></div>
+      <div class="formula-line" style="color:var(--text2);font-size:11px;">→ Tren netral: durasi pekerjaan pada periode training sangat stabil (semua tepat 20 menit)</div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Perhitungan Seasonal Awal (S₀)</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">Rumus: S₀ = Y₁ − (L₀ + T₀)</div>
+      <div class="formula-line">S₀ = 0,333333 − (0,333333 + 0,000000)</div>
+      <div class="formula-line">S₀ = 0,333333 − 0,333333 = <span class="result">0,000000</span></div>
+      <div class="formula-line" style="color:var(--text2);font-size:11px;">→ Tidak ada efek seasonal awal karena data training seragam</div>
+    </div>
+  </div>
+
+  <div class="info-grid" style="margin-top:20px;">
+    <div class="info-card">
+      <div class="info-card-label">L₀ — Level Awal</div>
+      <div class="info-card-value">0,333333</div>
+      <div class="info-card-sub">≈ 20 menit 00 detik</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">T₀ — Trend Awal</div>
+      <div class="info-card-value">0,000000</div>
+      <div class="info-card-sub">Tren netral</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">S₀ — Seasonal Awal</div>
+      <div class="info-card-value">0,000000</div>
+      <div class="info-card-sub">Tidak ada efek seasonal</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 3: CONTOH PERHITUNGAN RECORD 2 ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div class="section-title">Contoh Perhitungan — Record No. 2 (Data Training)</div>
+  </div>
+  <p class="section-desc">Berikut adalah contoh perhitungan manual menggunakan metode Holt-Winters pada record ke-2 dengan parameter α=0,3, β=0,4, γ=0,1.</p>
+
+  <div class="formula-box">
+    <div class="formula-title">Nilai dari Record Sebelumnya (t=1)</div>
+    <div class="formula-line">L₁ = <span class="var">0,333333</span> &nbsp;|&nbsp; T₁ = <span class="var">0,000000</span> &nbsp;|&nbsp; S₁ = <span class="var">0,000000</span></div>
+    <div class="formula-line">Y₂ (Aktual) = <span class="var">0,333333 jam</span> ≈ 20 menit 00 detik</div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">① Perhitungan Forecast F₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">F₂ = L₁ + T₁ + S₁</div>
+      <div class="formula-line">F₂ = 0,333333 + 0,000000 + 0,000000 = <span class="result">0,333333 jam ≈ 20 menit 00 detik</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">② Perhitungan Level L₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">L₂ = α(Y₂ − S₁) + (1−α)(L₁ + T₁)</div>
+      <div class="formula-line">L₂ = 0,3 × (0,333333 − 0,000000) + 0,7 × (0,333333 + 0,000000)</div>
+      <div class="formula-line">L₂ = 0,3 × <span class="val">0,333333</span> + 0,7 × <span class="val">0,333333</span></div>
+      <div class="formula-line">L₂ = 0,100000 + 0,233333 = <span class="result">0,333333 jam</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">③ Perhitungan Trend T₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">T₂ = β(L₂ − L₁) + (1−β)T₁</div>
+      <div class="formula-line">T₂ = 0,4 × (0,333333 − 0,333333) + 0,6 × 0,000000</div>
+      <div class="formula-line">T₂ = 0,4 × <span class="val">0,000000</span> + 0,6 × <span class="val">0,000000</span> = <span class="result">0,000000</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">④ Perhitungan Seasonal S₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">S₂ = γ(Y₂ − L₂) + (1−γ)S₁</div>
+      <div class="formula-line">S₂ = 0,1 × (0,333333 − 0,333333) + 0,9 × 0,000000</div>
+      <div class="formula-line">S₂ = 0,1 × <span class="val">0,000000</span> + 0,9 × <span class="val">0,000000</span> = <span class="result">0,000000</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 4: CONTOH RECORD 79 (TESTING) ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div class="section-title">Contoh Perhitungan — Record No. 79 (Testing Pertama)</div>
+  </div>
+  <p class="section-desc">Record No. 79 adalah data testing pertama. Pada titik ini model bertemu data dengan durasi yang sedikit berbeda dari training.</p>
+
+  <div class="formula-box">
+    <div class="formula-title">Nilai dari Record Sebelumnya (t=78)</div>
+    <div class="formula-line">L₇₈ = <span class="var">0,333333</span> &nbsp;|&nbsp; T₇₈ = <span class="var">0,000000</span> &nbsp;|&nbsp; S₇₈ = <span class="var">0,000000</span></div>
+    <div class="formula-line">Y₇₉ (Aktual) = <span class="var">0,354722 jam</span> ≈ 21 menit 17 detik</div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">① Perhitungan Forecast F₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">F₇₉ = L₇₈ + T₇₈ + S₇₈</div>
+      <div class="formula-line">F₇₉ = 0,333333 + 0,000000 + 0,000000 = <span class="result">0,333333 jam ≈ 20 menit 00 detik</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">② Perhitungan Level L₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">L₇₉ = α(Y₇₉ − S₇₈) + (1−α)(L₇₈ + T₇₈)</div>
+      <div class="formula-line">L₇₉ = 0,3 × (0,354722 − 0,000000) + 0,7 × (0,333333 + 0,000000)</div>
+      <div class="formula-line">L₇₉ = 0,3 × <span class="val">0,354722</span> + 0,7 × <span class="val">0,333333</span></div>
+      <div class="formula-line">L₇₉ = 0,106417 + 0,233333 = <span class="result">0,339750 jam</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">③ Perhitungan Trend T₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">T₇₉ = β(L₇₉ − L₇₈) + (1−β)T₇₈</div>
+      <div class="formula-line">T₇₉ = 0,4 × (0,339750 − 0,333333) + 0,6 × 0,000000</div>
+      <div class="formula-line">T₇₉ = 0,4 × <span class="val">0,006417</span> + 0 = <span class="result">0,002567</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">④ Perhitungan Seasonal S₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">S₇₉ = γ(Y₇₉ − L₇₉) + (1−γ)S₇₈</div>
+      <div class="formula-line">S₇₉ = 0,1 × (0,354722 − 0,339750) + 0,9 × 0,000000</div>
+      <div class="formula-line">S₇₉ = 0,1 × <span class="val">0,014972</span> + 0 = <span class="result">0,001497</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">⑤ Perhitungan Error & APE Record No. 79</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">Error = Y₇₉ − F₇₉ = 0,354722 − 0,333333 = <span class="result pos">+0,021389 jam</span></div>
+      <div class="formula-line">|Error| = <span class="val">0,021389</span></div>
+      <div class="formula-line">APE = (|Error| ÷ Y₇₉) × 100 = (0,021389 ÷ 0,354722) × 100 = <span class="result">6,03%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 5: TABEL LENGKAP HW ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div class="section-title">Tabel Hasil Perhitungan Holt-Winters — Seluruh Record</div>
+  </div>
+  <p class="section-desc">Tabel berikut menyajikan nilai Yₜ, Lₜ, Tₜ, Sₜ, dan Fₜ untuk seluruh 97 record. Scroll vertikal tersedia.</p>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Inisialisasi</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Training (No.1–78)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Testing (No.79–97)</div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Tanggal</th>
+          <th>Yₜ (Jam)</th>
+          <th>Yₜ (Menit)</th>
+          <th>Lₜ</th>
+          <th>Tₜ</th>
+          <th>Sₜ</th>
+          <th>Fₜ (Jam)</th>
+          <th>Fₜ (Menit)</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-hw"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 6: APE TESTING ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div class="section-title">Evaluasi Akurasi — APE Per Record Testing</div>
+  </div>
+  <p class="section-desc">
+    Evaluasi dilakukan pada 19 record testing (No. 79–97). Nilai APE dihitung per record kemudian dijumlahkan untuk memperoleh MAPE.
+  </p>
+
+  <div class="formula-box">
+    <div class="formula-title">Rumus Evaluasi Akurasi</div>
+    <div class="formula-line">Error = Yₜ − Fₜ</div>
+    <div class="formula-line">|Error| = |Yₜ − Fₜ|</div>
+    <div class="formula-line">APE = (|Error| ÷ Yₜ) × 100%</div>
+    <div class="formula-line">MAPE = ΣAPE ÷ n &nbsp;&nbsp;(n = 19 record testing)</div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="ape-table">
+      <thead>
+        <tr>
+          <th>No (t)</th>
+          <th>Tanggal</th>
+          <th>Yₜ (Jam)</th>
+          <th>Fₜ (Jam)</th>
+          <th>Error</th>
+          <th>|Error|</th>
+          <th>APE (%)</th>
+          <th>Kumulatif (%)</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-ape"></tbody>
+    </table>
+  </div>
+
+  <!-- MAPE Calculation -->
+  <div style="margin-top:20px;">
+    <div class="formula-box">
+      <div class="formula-title">Langkah Perhitungan MAPE</div>
+      <div class="formula-line">ΣAPE = 6,0298 + 9,3401 + 6,4086 + 8,8176 + 6,8693 + 8,3619 + 7,1890 + 8,1045 + 7,3322 + 8,0228 + 7,3514 + 8,0415 + 7,3141 + 8,0932 + 7,2685 + 8,1383 + 7,2368 + 8,1640 + 7,2225</div>
+      <div class="formula-line">ΣAPE = <span class="val">145,3061%</span></div>
+      <div class="formula-line">n = <span class="var">19</span> record testing</div>
+      <div class="formula-line">MAPE = 145,3061 ÷ 19 = <span class="result">7,6477%</span></div>
+    </div>
+  </div>
+
+  <!-- MAPE Result -->
+  <div class="mape-result">
+    <div class="mape-label">Mean Absolute Percentage Error (MAPE)</div>
+    <div class="mape-value">7,65<span class="mape-unit">%</span></div>
+    <div class="mape-interp">
+      Nilai MAPE <b>7,65%</b> termasuk kategori <b>"Sangat Baik"</b> (MAPE &lt; 10%).<br>
+      Model Holt-Winters mampu meramalkan durasi pekerjaan dengan tingkat akurasi tinggi.
+    </div>
+  </div>
+
+  <!-- Prediction -->
+  <div class="predict-box">
+    <div>
+      <div class="predict-label">Prediksi Durasi Record Berikutnya (F₉₈)</div>
+      <div class="predict-value">20,41 menit</div>
+      <div class="predict-sub">F₉₈ = L₉₇ + T₉₇ + S₉₇ = 0,337672 + 0,001560 + 0,000910 = <b>0,340141 jam</b></div>
+    </div>
+    <div style="text-align:right;">
+      <div class="predict-label">Konversi</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:18px; color:var(--text3);">0,340141 jam</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:var(--text2);">≈ 20 menit 24 detik</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 7: RINGKASAN AKHIR ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">07</div>
+    <div class="section-title">Ringkasan Model</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-label">Metode</div>
+      <div class="info-card-value" style="font-size:14px;">Holt-Winters</div>
+      <div class="info-card-sub">Triple Exponential Smoothing</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">α (Level)</div>
+      <div class="info-card-value">0,3</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">β (Trend)</div>
+      <div class="info-card-value">0,4</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">γ (Seasonal)</div>
+      <div class="info-card-value">0,1</div>
+    </div>
+    <div class="info-card green">
+      <div class="info-card-label">MAPE</div>
+      <div class="info-card-value">7,65%</div>
+      <div class="info-card-sub">Kategori: Sangat Baik</div>
+    </div>
+    <div class="info-card blue">
+      <div class="info-card-label">Prediksi Berikutnya</div>
+      <div class="info-card-value">20,41'</div>
+      <div class="info-card-sub">≈ 20 menit 24 detik</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Total Data</div>
+      <div class="info-card-value">97</div>
+      <div class="info-card-sub">78 training + 19 testing</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">L₀ Inisialisasi</div>
+      <div class="info-card-value">0,3333</div>
+      <div class="info-card-sub">20 menit 00 detik</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  PLN Galesong 2025 &nbsp;|&nbsp; Holt-Winters Triple Exponential Smoothing &nbsp;|&nbsp; α=0,3 β=0,4 γ=0,1
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const hwData = [
+  {no:1, hari:"Rabu", tgl:"1/1/2025", nama:"BAHARUDDIN", mulai:"8:20:00", selesai:"8:40:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:null, error:null, absError:null, ape:null, status:"Inisialisasi"},
+  {no:2, hari:"Rabu", tgl:"1/1/2025", nama:"MALLOMBASI", mulai:"14:15:00", selesai:"14:35:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:3, hari:"Jumat", tgl:"1/10/2025", nama:"BAHARUDDIN", mulai:"9:30:00", selesai:"9:50:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:4, hari:"Jumat", tgl:"1/17/2025", nama:"MALLOMBASI", mulai:"9:05:00", selesai:"9:25:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:5, hari:"Senin", tgl:"1/20/2025", nama:"BAHARUDDIN", mulai:"10:40:00", selesai:"11:00:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:6, hari:"Selasa", tgl:"2/4/2025", nama:"MALLOMBASI", mulai:"16:50:00", selesai:"17:10:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:7, hari:"Jumat", tgl:"2/7/2025", nama:"BAHARUDDIN", mulai:"16:05:00", selesai:"16:25:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:8, hari:"Senin", tgl:"2/10/2025", nama:"MALLOMBASI", mulai:"8:50:00", selesai:"9:10:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:9, hari:"Senin", tgl:"2/10/2025", nama:"BAHARUDDIN", mulai:"13:35:00", selesai:"13:55:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:10, hari:"Kamis", tgl:"2/13/2025", nama:"MALLOMBASI", mulai:"8:55:00", selesai:"9:15:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:11, hari:"Kamis", tgl:"2/13/2025", nama:"BAHARUDDIN", mulai:"11:30:00", selesai:"11:50:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:12, hari:"Minggu", tgl:"2/16/2025", nama:"MALLOMBASI", mulai:"8:46:00", selesai:"9:06:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:13, hari:"Minggu", tgl:"2/23/2025", nama:"BAHARUDDIN", mulai:"16:28:00", selesai:"16:48:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:14, hari:"Minggu", tgl:"2/23/2025", nama:"MALLOMBASI", mulai:"18:24:00", selesai:"18:44:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:15, hari:"Sabtu", tgl:"3/1/2025", nama:"BAHARUDDIN", mulai:"10:23:00", selesai:"10:43:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:16, hari:"Selasa", tgl:"3/4/2025", nama:"MALLOMBASI", mulai:"1:33:00", selesai:"1:53:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:17, hari:"Selasa", tgl:"3/4/2025", nama:"BAHARUDDIN", mulai:"13:18:00", selesai:"13:38:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:18, hari:"Selasa", tgl:"3/4/2025", nama:"MALLOMBASI", mulai:"20:01:00", selesai:"20:21:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:19, hari:"Senin", tgl:"3/10/2025", nama:"BAHARUDDIN", mulai:"14:26:00", selesai:"14:46:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:20, hari:"Kamis", tgl:"3/13/2025", nama:"MALLOMBASI", mulai:"11:10:00", selesai:"11:30:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:21, hari:"Senin", tgl:"3/17/2025", nama:"BAHARUDDIN", mulai:"1:29:00", selesai:"1:49:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:22, hari:"Senin", tgl:"3/17/2025", nama:"MALLOMBASI", mulai:"11:07:00", selesai:"11:27:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:23, hari:"Senin", tgl:"3/17/2025", nama:"BAHARUDDIN", mulai:"16:17:00", selesai:"16:37:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:24, hari:"Senin", tgl:"3/17/2025", nama:"MALLOMBASI", mulai:"21:08:00", selesai:"21:28:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:25, hari:"Kamis", tgl:"3/20/2025", nama:"BAHARUDDIN", mulai:"20:52:00", selesai:"21:12:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:26, hari:"Minggu", tgl:"3/23/2025", nama:"MALLOMBASI", mulai:"20:16:00", selesai:"20:36:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:27, hari:"Sabtu", tgl:"3/29/2025", nama:"BAHARUDDIN", mulai:"14:15:00", selesai:"14:35:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:28, hari:"Selasa", tgl:"4/1/2025", nama:"MALLOMBASI", mulai:"10:32:00", selesai:"10:52:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:29, hari:"Jumat", tgl:"4/4/2025", nama:"BAHARUDDIN", mulai:"10:43:00", selesai:"11:03:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:30, hari:"Senin", tgl:"4/7/2025", nama:"MALLOMBASI", mulai:"8:43:00", selesai:"9:03:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:31, hari:"Senin", tgl:"4/7/2025", nama:"BAHARUDDIN", mulai:"14:53:00", selesai:"15:13:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:32, hari:"Kamis", tgl:"4/10/2025", nama:"MALLOMBASI", mulai:"15:44:00", selesai:"16:04:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:33, hari:"Minggu", tgl:"4/13/2025", nama:"BAHARUDDIN", mulai:"9:28:00", selesai:"9:48:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:34, hari:"Kamis", tgl:"4/17/2025", nama:"MALLOMBASI", mulai:"11:38:00", selesai:"11:58:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:35, hari:"Selasa", tgl:"4/29/2025", nama:"BAHARUDDIN", mulai:"15:59:00", selesai:"16:19:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:36, hari:"Jumat", tgl:"5/2/2025", nama:"MALLOMBASI", mulai:"10:21:00", selesai:"10:41:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:37, hari:"Jumat", tgl:"5/2/2025", nama:"BAHARUDDIN", mulai:"9:18:00", selesai:"9:38:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:38, hari:"Jumat", tgl:"5/2/2025", nama:"MALLOMBASI", mulai:"18:34:00", selesai:"18:54:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:39, hari:"Senin", tgl:"5/5/2025", nama:"BAHARUDDIN", mulai:"8:53:00", selesai:"9:13:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:40, hari:"Kamis", tgl:"5/8/2025", nama:"MALLOMBASI", mulai:"18:39:00", selesai:"18:59:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:41, hari:"Jumat", tgl:"5/23/2025", nama:"BAHARUDDIN", mulai:"10:16:00", selesai:"10:36:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:42, hari:"Jumat", tgl:"5/23/2025", nama:"MALLOMBASI", mulai:"15:10:00", selesai:"15:30:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:43, hari:"Minggu", tgl:"6/8/2025", nama:"BAHARUDDIN", mulai:"13:58:00", selesai:"14:18:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:44, hari:"Jumat", tgl:"6/20/2025", nama:"MALLOMBASI", mulai:"9:43:00", selesai:"10:03:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:45, hari:"Jumat", tgl:"6/20/2025", nama:"BAHARUDDIN", mulai:"16:58:00", selesai:"17:18:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:46, hari:"Rabu", tgl:"6/25/2025", nama:"MALLOMBASI", mulai:"14:52:00", selesai:"15:12:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:47, hari:"Selasa", tgl:"7/1/2025", nama:"BAHARUDDIN", mulai:"8:38:00", selesai:"8:58:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:48, hari:"Selasa", tgl:"7/1/2025", nama:"MALLOMBASI", mulai:"10:18:00", selesai:"10:38:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:49, hari:"Selasa", tgl:"7/1/2025", nama:"BAHARUDDIN", mulai:"12:35:00", selesai:"12:55:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:50, hari:"Selasa", tgl:"7/1/2025", nama:"MALLOMBASI", mulai:"13:27:00", selesai:"13:47:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:51, hari:"Selasa", tgl:"7/1/2025", nama:"BAHARUDDIN", mulai:"17:55:00", selesai:"18:15:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:52, hari:"Selasa", tgl:"7/1/2025", nama:"MALLOMBASI", mulai:"18:34:00", selesai:"18:54:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:53, hari:"Senin", tgl:"7/7/2025", nama:"BAHARUDDIN", mulai:"8:38:00", selesai:"8:58:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:54, hari:"Senin", tgl:"7/7/2025", nama:"MALLOMBASI", mulai:"11:41:00", selesai:"12:01:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:55, hari:"Senin", tgl:"7/7/2025", nama:"BAHARUDDIN", mulai:"13:58:00", selesai:"14:18:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:56, hari:"Senin", tgl:"7/7/2025", nama:"MALLOMBASI", mulai:"17:05:00", selesai:"17:25:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:57, hari:"Kamis", tgl:"7/10/2025", nama:"BAHARUDDIN", mulai:"12:12:00", selesai:"12:32:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:58, hari:"Kamis", tgl:"7/10/2025", nama:"MALLOMBASI", mulai:"13:39:00", selesai:"13:59:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:59, hari:"Kamis", tgl:"7/10/2025", nama:"BAHARUDDIN", mulai:"15:28:00", selesai:"15:48:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:60, hari:"Minggu", tgl:"7/13/2025", nama:"MALLOMBASI", mulai:"8:59:00", selesai:"9:19:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:61, hari:"Minggu", tgl:"7/13/2025", nama:"BAHARUDDIN", mulai:"10:21:00", selesai:"10:41:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:62, hari:"Minggu", tgl:"7/13/2025", nama:"MALLOMBASI", mulai:"15:22:00", selesai:"15:42:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:63, hari:"Selasa", tgl:"7/22/2025", nama:"BAHARUDDIN", mulai:"10:00:00", selesai:"10:20:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:64, hari:"Selasa", tgl:"7/22/2025", nama:"MALLOMBASI", mulai:"11:47:00", selesai:"12:07:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:65, hari:"Selasa", tgl:"7/22/2025", nama:"BAHARUDDIN", mulai:"13:55:00", selesai:"14:15:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:66, hari:"Jumat", tgl:"7/25/2025", nama:"MALLOMBASI", mulai:"8:03:00", selesai:"8:23:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:67, hari:"Jumat", tgl:"7/25/2025", nama:"BAHARUDDIN", mulai:"8:19:00", selesai:"8:39:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:68, hari:"Senin", tgl:"7/28/2025", nama:"MALLOMBASI", mulai:"10:35:00", selesai:"10:55:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:69, hari:"Senin", tgl:"7/28/2025", nama:"BAHARUDDIN", mulai:"16:33:00", selesai:"16:53:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:70, hari:"Kamis", tgl:"7/31/2025", nama:"MALLOMBASI", mulai:"14:31:00", selesai:"14:51:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:71, hari:"Kamis", tgl:"7/31/2025", nama:"BAHARUDDIN", mulai:"16:05:00", selesai:"16:25:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:72, hari:"Selasa", tgl:"8/12/2025", nama:"MALLOMBASI", mulai:"9:56:00", selesai:"10:16:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:73, hari:"Selasa", tgl:"8/12/2025", nama:"BAHARUDDIN", mulai:"12:38:00", selesai:"12:58:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:74, hari:"Jumat", tgl:"8/15/2025", nama:"MALLOMBASI", mulai:"14:52:00", selesai:"15:12:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:75, hari:"Jumat", tgl:"8/15/2025", nama:"BAHARUDDIN", mulai:"15:50:00", selesai:"16:10:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:76, hari:"Senin", tgl:"8/18/2025", nama:"MALLOMBASI", mulai:"9:32:00", selesai:"9:52:00", yt:0.333333, lt:0.333333, tt:0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:77, hari:"Kamis", tgl:"8/21/2025", nama:"BAHARUDDIN", mulai:"10:48:00", selesai:"11:08:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:78, hari:"Rabu", tgl:"8/27/2025", nama:"MALLOMBASI", mulai:"16:45:00", selesai:"17:05:00", yt:0.333333, lt:0.333333, tt:-0.00000000, st:-0.000000, ft:0.333333, error:null, absError:null, ape:null, status:"Training"},
+  {no:79, hari:"Sabtu", tgl:"8/30/2025", nama:"BAHARUDDIN", mulai:"8:12:00", selesai:"8:33:17", yt:0.354722, lt:0.339750, tt:0.002567, st:0.001497, ft:0.333333, error:0.021389, absError:0.021389, ape:6.0298, status:"Testing"},
+  {no:80, hari:"Rabu", tgl:"9/3/2025", nama:"MALLOMBASI", mulai:"12:28:00", selesai:"12:46:52", yt:0.314444, lt:0.333506, tt:-0.000958, st:-0.000559, ft:0.343814, error:-0.029369, absError:0.029369, ape:9.3401, status:"Testing"},
+  {no:81, hari:"Jumat", tgl:"9/12/2025", nama:"BAHARUDDIN", mulai:"12:56:00", selesai:"13:17:17", yt:0.354722, lt:0.339368, tt:0.001770, st:0.001033, ft:0.331990, error:0.022733, absError:0.022733, ape:6.4086, status:"Testing"},
+  {no:82, hari:"Minggu", tgl:"9/21/2025", nama:"MALLOMBASI", mulai:"8:44:00", selesai:"9:02:52", yt:0.314444, lt:0.332820, tt:-0.001557, st:-0.000908, ft:0.342171, error:-0.027726, absError:0.027726, ape:8.8176, status:"Testing"},
+  {no:83, hari:"Sabtu", tgl:"9/27/2025", nama:"BAHARUDDIN", mulai:"15:29:00", selesai:"15:50:17", yt:0.354722, lt:0.338573, tt:0.001367, st:0.000797, ft:0.330355, error:0.024367, absError:0.024367, ape:6.8693, status:"Testing"},
+  {no:84, hari:"Sabtu", tgl:"9/27/2025", nama:"MALLOMBASI", mulai:"17:14:00", selesai:"17:32:52", yt:0.314444, lt:0.332053, tt:-0.001788, st:-0.001043, ft:0.340738, error:-0.026294, absError:0.026294, ape:8.3619, status:"Testing"},
+  {no:85, hari:"Jumat", tgl:"10/10/2025", nama:"BAHARUDDIN", mulai:"13:58:00", selesai:"14:19:17", yt:0.354722, lt:0.337915, tt:0.001272, st:0.000742, ft:0.329221, error:0.025501, absError:0.025501, ape:7.1890, status:"Testing"},
+  {no:86, hari:"Kamis", tgl:"10/16/2025", nama:"MALLOMBASI", mulai:"9:30:00", selesai:"9:48:52", yt:0.314444, lt:0.331541, tt:-0.001786, st:-0.001042, ft:0.339929, error:-0.025484, absError:0.025484, ape:8.1045, status:"Testing"},
+  {no:87, hari:"Minggu", tgl:"10/19/2025", nama:"BAHARUDDIN", mulai:"9:33:00", selesai:"9:54:17", yt:0.354722, lt:0.337558, tt:0.001335, st:0.000779, ft:0.328713, error:0.026009, absError:0.026009, ape:7.3322, status:"Testing"},
+  {no:88, hari:"Rabu", tgl:"10/22/2025", nama:"MALLOMBASI", mulai:"9:40:00", selesai:"9:58:52", yt:0.314444, lt:0.331325, tt:-0.001692, st:-0.000987, ft:0.339672, error:-0.025227, absError:0.025227, ape:8.0228, status:"Testing"},
+  {no:89, hari:"Rabu", tgl:"10/22/2025", nama:"BAHARUDDIN", mulai:"9:53:00", selesai:"10:14:17", yt:0.354722, lt:0.337456, tt:0.001437, st:0.000838, ft:0.328645, error:0.026077, absError:0.026077, ape:7.3514, status:"Testing"},
+  {no:90, hari:"Sabtu", tgl:"10/25/2025", nama:"MALLOMBASI", mulai:"12:35:00", selesai:"12:53:52", yt:0.314444, lt:0.331307, tt:-0.001597, st:-0.000932, ft:0.339731, error:-0.025286, absError:0.025286, ape:8.0415, status:"Testing"},
+  {no:91, hari:"Rabu", tgl:"11/12/2025", nama:"BAHARUDDIN", mulai:"7:42:00", selesai:"8:03:17", yt:0.354722, lt:0.337493, tt:0.001516, st:0.000884, ft:0.328777, error:0.025945, absError:0.025945, ape:7.3141, status:"Testing"},
+  {no:92, hari:"Rabu", tgl:"11/12/2025", nama:"MALLOMBASI", mulai:"13:23:00", selesai:"13:41:52", yt:0.314444, lt:0.331374, tt:-0.001538, st:-0.000897, ft:0.339893, error:-0.025448, absError:0.025448, ape:8.0932, status:"Testing"},
+  {no:93, hari:"Jumat", tgl:"12/12/2025", nama:"BAHARUDDIN", mulai:"9:33:00", selesai:"9:54:17", yt:0.354722, lt:0.337571, tt:0.001556, st:0.000908, ft:0.328939, error:0.025783, absError:0.025783, ape:7.2685, status:"Testing"},
+  {no:94, hari:"Kamis", tgl:"12/18/2025", nama:"MALLOMBASI", mulai:"15:32:00", selesai:"15:50:52", yt:0.314444, lt:0.331450, tt:-0.001515, st:-0.000884, ft:0.340035, error:-0.025591, absError:0.025591, ape:8.1383, status:"Testing"},
+  {no:95, hari:"Kamis", tgl:"12/18/2025", nama:"BAHARUDDIN", mulai:"17:54:00", selesai:"18:15:17", yt:0.354722, lt:0.337636, tt:0.001566, st:0.000913, ft:0.329052, error:0.025670, absError:0.025670, ape:7.2368, status:"Testing"},
+  {no:96, hari:"Minggu", tgl:"12/21/2025", nama:"MALLOMBASI", mulai:"12:37:00", selesai:"12:55:52", yt:0.314444, lt:0.331501, tt:-0.001515, st:-0.000884, ft:0.340116, error:-0.025671, absError:0.025671, ape:8.1640, status:"Testing"},
+  {no:97, hari:"Sabtu", tgl:"12/27/2025", nama:"BAHARUDDIN", mulai:"16:34:00", selesai:"16:55:17", yt:0.354722, lt:0.337672, tt:0.001560, st:0.000910, ft:0.329102, error:0.025620, absError:0.025620, ape:7.2225, status:"Testing"},
+];
+
+function toMinutes(h) { return (h * 60).toFixed(4); }
+function hms(h) {
+  const tot = Math.round(h * 3600);
+  const hh = Math.floor(tot/3600);
+  const mm = Math.floor((tot%3600)/60);
+  const ss = tot % 60;
+  return `${hh}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+function fmt(v, d=6) { return v === null ? '<span class="null-cell">—</span>' : Number(v).toFixed(d); }
+
+// ---- TABLE 1: DATA ----
+const tbodyData = document.getElementById('tbody-data');
+hwData.forEach(r => {
+  const durMs = hms(r.yt);
+  const cls = r.status === 'Inisialisasi' ? 'init' : r.status === 'Training' ? 'train' : 'test';
+  const badgeCls = r.status === 'Inisialisasi' ? 'badge-init' : r.status === 'Training' ? 'badge-train' : 'badge-test';
+  const tr = document.createElement('tr');
+  tr.className = cls;
+  tr.innerHTML = `
+    <td>${r.no}</td>
+    <td>${r.hari}</td>
+    <td>${r.tgl}</td>
+    <td class="left">${r.nama}</td>
+    <td>${r.mulai}</td>
+    <td>${r.selesai}</td>
+    <td>${durMs}</td>
+    <td>${r.yt.toFixed(6)}</td>
+    <td><span class="badge-status ${badgeCls}">${r.status}</span></td>
+  `;
+  tbodyData.appendChild(tr);
+});
+
+// ---- TABLE 2: HW Full ----
+const tbodyHW = document.getElementById('tbody-hw');
+hwData.forEach(r => {
+  const cls = r.status === 'Inisialisasi' ? 'init' : r.status === 'Training' ? 'train' : 'test';
+  const badgeCls = r.status === 'Inisialisasi' ? 'badge-init' : r.status === 'Training' ? 'badge-train' : 'badge-test';
+  const ftJam = r.ft !== null ? r.ft.toFixed(6) : '<span class="null-cell">—</span>';
+  const ftMin = r.ft !== null ? (r.ft*60).toFixed(4) : '<span class="null-cell">—</span>';
+  const tr = document.createElement('tr');
+  tr.className = cls;
+  tr.innerHTML = `
+    <td>${r.no}</td>
+    <td>${r.tgl}</td>
+    <td>${r.yt.toFixed(6)}</td>
+    <td>${(r.yt*60).toFixed(2)}</td>
+    <td>${r.lt.toFixed(6)}</td>
+    <td>${r.tt.toFixed(6)}</td>
+    <td>${r.st.toFixed(6)}</td>
+    <td>${ftJam}</td>
+    <td>${ftMin}</td>
+    <td><span class="badge-status ${badgeCls}">${r.status}</span></td>
+  `;
+  tbodyHW.appendChild(tr);
+});
+
+// ---- TABLE 3: APE ----
+const tbodyAPE = document.getElementById('tbody-ape');
+let cumulative = 0;
+hwData.filter(r => r.status === 'Testing').forEach(r => {
+  cumulative += r.ape;
+  const errClass = r.error >= 0 ? 'pos' : 'neg';
+  const tr = document.createElement('tr');
+  tr.className = 'test ape-row';
+  tr.innerHTML = `
+    <td>${r.no}</td>
+    <td>${r.tgl}</td>
+    <td>${r.yt.toFixed(6)}</td>
+    <td>${r.ft.toFixed(6)}</td>
+    <td class="${errClass}">${r.error.toFixed(6)}</td>
+    <td>${r.absError.toFixed(6)}</td>
+    <td>${r.ape.toFixed(4)}</td>
+    <td>${cumulative.toFixed(4)}</td>
+  `;
+  tbodyAPE.appendChild(tr);
+});
+// Totals row
+const totalTr = document.createElement('tr');
+totalTr.style.cssText = 'background:rgba(240,165,0,0.08); border-top:2px solid var(--accent);';
+totalTr.innerHTML = `
+  <td colspan="6" style="text-align:right; font-weight:600; color:var(--accent); font-family:'IBM Plex Mono',monospace; padding:10px;">ΣAPE =</td>
+  <td colspan="2" style="font-weight:600; color:var(--accent); font-family:'IBM Plex Mono',monospace; font-size:14px;">145,3061% &nbsp;|&nbsp; n=19 &nbsp;|&nbsp; <span style="color:var(--accent3)">MAPE = 7,6477%</span></td>
+`;
+tbodyAPE.appendChild(totalTr);
+</script>
+</body>
+</html>

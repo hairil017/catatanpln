@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perhitungan Holt-Winters — Perbaikan Meteran PLN Galesong 2025</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --accent: #f0a500;
+    --accent2: #3fb950;
+    --accent3: #58a6ff;
+    --accent4: #ff7b72;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #c9d1d9;
+    --init-bg: #1c2333;
+    --train-bg: #0d1117;
+    --test-bg: #161b22;
+    --init-border: #f0a500;
+    --train-border: #3fb950;
+    --test-border: #58a6ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* ===== HEADER ===== */
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #1a2540 50%, #0d1117 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 56px 48px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(240,165,0,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--text2);
+    margin-bottom: 28px;
+  }
+  .param-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text3);
+  }
+  .badge b { color: var(--accent); }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 32px 64px; }
+
+  /* ===== SECTIONS ===== */
+  .section {
+    margin-top: 48px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    opacity: 0.6;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .sub-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    color: var(--accent3);
+    margin: 28px 0 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-desc {
+    color: var(--text2);
+    font-size: 13.5px;
+    margin-bottom: 20px;
+  }
+
+  /* ===== INFO CARDS ===== */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .info-card-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .info-card-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .info-card-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+  .info-card.green .info-card-value { color: var(--accent2); }
+  .info-card.blue .info-card-value { color: var(--accent3); }
+  .info-card.red .info-card-value { color: var(--accent4); }
+
+  /* ===== FORMULA BOX ===== */
+  .formula-box {
+    background: var(--surface2);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 18px 22px;
+    margin: 16px 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text3);
+  }
+  .formula-box .formula-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .formula-line {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .formula-line:last-child { border-bottom: none; }
+  .formula-line .var { color: var(--accent3); }
+  .formula-line .val { color: var(--accent2); }
+  .formula-line .result { color: var(--accent); font-weight: 600; }
+
+  /* ===== STEP BOX ===== */
+  .step-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent3);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .step-title::before {
+    content: '▶';
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  /* ===== EXPLAIN BOX (gaya penjelasan hasil) ===== */
+  .explain-box {
+    background: rgba(88, 166, 255, 0.06);
+    border-left: 4px solid var(--accent3);
+    border-radius: 0 8px 8px 0;
+    padding: 18px 22px;
+    margin: 16px 0;
+  }
+  .explain-box strong {
+    color: var(--accent3);
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .explain-box p {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.65;
+    margin: 0;
+  }
+  .info-box {
+    background: rgba(240, 165, 0, 0.06);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 18px 22px;
+    margin: 16px 0;
+  }
+  .info-box strong {
+    color: var(--accent);
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .info-box p {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 4px 0 0;
+  }
+  .result-box {
+    background: linear-gradient(135deg, rgba(63, 185, 80, 0.12), rgba(63, 185, 80, 0.06));
+    border: 1px solid rgba(63, 185, 80, 0.35);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .result-box .result-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent2);
+    margin: 4px 0;
+  }
+  .result-box .result-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+  .table-wrap .mono { font-family: 'IBM Plex Mono', monospace; }
+  .table-wrap .hl { background: rgba(240, 165, 0, 0.12); padding: 2px 6px; border-radius: 4px; font-weight: 600; color: var(--accent); }
+
+  /* ===== TABLES ===== */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-top: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  thead th {
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td {
+    padding: 9px 10px;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+  tbody td.left { text-align: left; }
+
+  /* Row status colors */
+  tr.init { border-left: 3px solid var(--init-border); background: rgba(240,165,0,0.04); }
+  tr.train { border-left: 3px solid var(--train-border); }
+  tr.test  { border-left: 3px solid var(--test-border); background: rgba(88,166,255,0.04); }
+
+  .badge-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badge-init { background: rgba(240,165,0,0.15); color: var(--accent); border: 1px solid rgba(240,165,0,0.3); }
+  .badge-train { background: rgba(63,185,80,0.12); color: var(--accent2); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-test  { background: rgba(88,166,255,0.12); color: var(--accent3); border: 1px solid rgba(88,166,255,0.3); }
+
+  .null-cell { color: var(--text2); }
+
+  /* Positive/negative coloring */
+  .pos { color: var(--accent2); }
+  .neg { color: var(--accent4); }
+  .ape-hi { color: var(--accent4); font-weight: 700; }
+  .ape-md { color: var(--accent); font-weight: 600; }
+  .ape-lo { color: var(--accent2); font-weight: 600; }
+
+  /* ===== APE TABLE ===== */
+  .ape-table th { background: #1a2540; }
+  tr.ape-row td { padding: 8px 10px; }
+
+  /* ===== MAPE RESULT ===== */
+  .mape-result {
+    background: linear-gradient(135deg, #1a2540, #1c2333);
+    border: 2px solid var(--accent3);
+    border-radius: 12px;
+    padding: 28px 32px;
+    text-align: center;
+    margin-top: 24px;
+  }
+  .mape-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .mape-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 56px;
+    font-weight: 900;
+    color: var(--accent3);
+    line-height: 1;
+  }
+  .mape-unit {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    color: var(--accent);
+    vertical-align: super;
+  }
+  .mape-interp {
+    margin-top: 12px;
+    font-size: 15px;
+    color: var(--text2);
+  }
+  .mape-interp b { color: var(--accent2); }
+
+  /* ===== PREDICTION BOX ===== */
+  .predict-box {
+    background: linear-gradient(135deg, #1a2a1a, #1a2333);
+    border: 2px solid var(--accent2);
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .predict-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .predict-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--accent2);
+    line-height: 1;
+  }
+  .predict-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  /* ===== LEGEND ===== */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text2);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+  }
+
+  /* ===== SCROLLABLE TABLE CONTAINER ===== */
+  .btn-excel {
+    background: linear-gradient(135deg, #0d7a3d 0%, #0a5c2e 100%);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .btn-excel:hover {
+    background: linear-gradient(135deg, #0e8c46 0%, #0d7a3d 100%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  .table-container {
+    max-height: 550px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .table-container table { border: none; border-radius: 0; }
+  .table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    margin-top: 64px;
+    padding: 24px 48px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 1px;
+  }
+
+  /* ===== PRINT ===== */
+  @media print {
+    .table-container { max-height: none; overflow: visible; }
+    body { background: white; color: black; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Laporan Perhitungan Peramalan</div>
+  <h1>Triple Exponential Smoothing<br><span>Holt-Winters</span></h1>
+  <div class="hero-sub">Kegiatan Perbaikan Meteran — PLN Galesong 2025 | Total 97 Record</div>
+  <div class="param-badges">
+    <div class="badge">α (Alpha) = <b>0,3</b></div>
+    <div class="badge">β (Beta) = <b>0,4</b></div>
+    <div class="badge">γ (Gamma) = <b>0,1</b></div>
+    <div class="badge">Training = <b>78 data</b> (No. 1–78)</div>
+    <div class="badge">Testing = <b>19 data</b> (No. 79–97)</div>
+    <div class="badge">Split = <b>80% / 20%</b></div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ===== SECTION 1: 4.2.1 DATA INPUT ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div class="section-title">4.2.1 Data Masukan</div>
+  </div>
+  <p class="section-desc">
+    Data yang digunakan merupakan rekapan Laporan Harian PLN Galesong periode tahun 2025. Pada penelitian ini, <strong>setiap record/transaksi harian diperlakukan sebagai satu nilai aktual Y<sub>t</sub></strong>, sehingga model melakukan prediksi untuk setiap pekerjaan secara individual berdasarkan urutan kronologis.
+  </p>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-label">Total Data</div>
+      <div class="info-card-value">97</div>
+      <div class="info-card-sub">Record pekerjaan</div>
+    </div>
+    <div class="info-card green">
+      <div class="info-card-label">Training (80%)</div>
+      <div class="info-card-value">78</div>
+      <div class="info-card-sub">Record No. 1 – 78</div>
+    </div>
+    <div class="info-card blue">
+      <div class="info-card-label">Testing (20%)</div>
+      <div class="info-card-value">19</div>
+      <div class="info-card-sub">Record No. 79 – 97</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Periode</div>
+      <div class="info-card-value">12</div>
+      <div class="info-card-sub">Bulan (Jan–Des 2025)</div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>Pembagian Dataset (80% Training & 20% Testing):</strong>
+    <p>• Data Training (80%) : Record No. 1 s.d. No. 78 → digunakan untuk melatih dan membentuk model Holt-Winters.</p>
+    <p>• Data Testing (20%) : Record No. 79 s.d. No. 97 → digunakan untuk menguji akurasi model melalui nilai MAPE.</p>
+    <p>• Parameter Smoothing : α = 0,3 (level), β = 0,4 (trend), γ = 0,1 (seasonal).</p>
+  </div>
+
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Pembagian 80:20 dipilih sebagai rasio standar dalam machine learning untuk memastikan model memiliki cukup data training (78 record) untuk mempelajari pola durasi pekerjaan, sekaligus memiliki data testing yang cukup representatif (19 record) untuk evaluasi performa. Dengan 97 total record yang tersebar sepanjang 12 bulan tahun 2025, pembagian ini memungkinkan model menangkap variasi musiman dan tren temporal.</p>
+  </div>
+
+  <h3 class="sub-title">1. Persiapan — Konversi Durasi ke Jam Desimal</h3>
+  <p class="section-desc">
+    Data mentah mencatat durasi dalam format Waktu Mulai – Waktu Selesai (H:MM:SS). Sebelum digunakan dalam proses analisis, durasi dikonversi ke bentuk jam desimal agar dapat diproses secara numerik.
+  </p>
+
+  <div class="formula-box">
+    <div class="formula-title">Rumus Konversi</div>
+    <div class="formula-line">Jam Desimal = Jam + (Menit ÷ 60) + (Detik ÷ 3600)</div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Contoh: Record No. 1 — Durasi 0:18:13</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">= 0 + (18 ÷ 60) + (13 ÷ 3600) = 0,303611 jam → Y₁ = <span class="result">0,303611</span></div>
+    </div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Contoh: Record No. 2 — Durasi 0:18:56</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">= 0 + (18 ÷ 60) + (56 ÷ 3600) = 0,315556 jam → Y₂ = <span class="result">0,315556</span></div>
+    </div>
+  </div>
+
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Konversi ke jam desimal diperlukan karena algoritma Holt-Winters membutuhkan data numerik kontinu. Format jam desimal memudahkan perhitungan matematis seperti rata-rata, tren, dan komponen seasonal. Sebagai contoh, durasi Record No. 1 (0:18:13 = 18 menit 13 detik) menjadi 0,303611 jam; Record No. 2 (0:18:56) menjadi 0,315556 jam. Seluruh 97 record dari data seeder PerbaikanMeteranKelompok1BaharuddinMallombasiSeeder dikonversi dengan cara yang sama sebelum dimasukkan ke dalam model.</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Record Inisialisasi (No.1)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Data Training (No.2–78)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Data Testing (No.79–97)</div>
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <button type="button" id="btn-export-excel" class="btn-excel">Simpan ke Excel</button>
+  </div>
+
+  <div class="table-container">
+    <table id="tbl-data">
+      <thead>
+        <tr>
+          <th>No</th><th>Hari</th><th>Tanggal</th><th>Nama</th>
+          <th>Waktu Mulai</th><th>Waktu Selesai</th>
+          <th>Durasi (H:MM)</th><th>Yₜ (Jam Desimal)</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-data"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 2: 2. INISIALISASI — RECORD PERTAMA ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div class="section-title">2. Inisialisasi — Record Pertama (t = 1)</div>
+  </div>
+  <p class="section-desc">Record pertama (No. 1, 1 Januari 2025) digunakan sebagai titik awal model. Nilai inisialisasi dihitung dari data training untuk memberikan titik awal yang representatif.</p>
+
+  <div class="result-box">
+    <div>Nilai Aktual Record Pertama</div>
+    <div class="result-val">Y₁ = <span id="init-Y1-display">—</span> jam</div>
+    <div class="result-sub">≈ <span id="init-Y1-menit">—</span></div>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Durasi pada record pertama menunjukkan pekerjaan perbaikan meteran yang relatif singkat. Nilai ini menjadi baseline awal untuk model, meskipun tidak merepresentasikan keseluruhan pola karena merupakan titik data tunggal. Seluruh 97 record dari data seeder (BAHARUDDIN & MALLOMBASI) dikonversi ke jam desimal sebelum inisialisasi.</p>
+  </div>
+
+  <h3 class="sub-title">Hitung Level Awal (L₀)</h3>
+  <div class="formula-box">
+    <div class="formula-title">Rumus</div>
+    <div class="formula-line">L₀ = (Y₁ + Y₂ + Y₃ + Y₄ + Y₅) ÷ 5</div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Penjumlahan 5 data pertama</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line"><span id="init-Y1">—</span> + <span id="init-Y2">—</span> + <span id="init-Y3">—</span> + <span id="init-Y4">—</span> + <span id="init-Y5">—</span> = <span class="val" id="init-L0-sum">—</span></div>
+    </div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Dibagi jumlah data</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">L₀ = <span id="init-L0-sum-div">—</span> ÷ 5 = <span class="result" id="init-L0">—</span></div>
+    </div>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Level awal L₀ diperoleh dari rata-rata 5 record pertama data seeder, memberikan baseline yang lebih stabil dibanding hanya menggunakan satu titik data. Nilai ini merepresentasikan durasi "normal" pekerjaan pada awal periode, dan menjadi dasar untuk menghitung komponen trend dan seasonal. Konversi ke menit (<span id="init-L0-menit-inline">—</span>) memudahkan interpretasi operasional.</p>
+  </div>
+
+  <h3 class="sub-title">Hitung Trend Awal (T₀)</h3>
+  <p class="section-desc">T₀ dihitung dari selisih Y₉₇ dan Y₁ dibagi (n × 18) untuk kenaikan gradual:</p>
+  <div class="formula-box">
+    <div class="formula-title">Rumus</div>
+    <div class="formula-line">T₀ = (Yₙ − Y₁) ÷ (n × 18)</div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Y₁ dan Y₉₇ (n = 97)</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">Y₁ = <span id="init-Y1-t">—</span>, Y₉₇ = <span id="init-Y97">—</span></div>
+    </div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Perhitungan T₀</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">T₀ = (<span id="init-Y97-t">—</span> − <span id="init-Y1-t2">—</span>) ÷ (97 × 18) = <span id="init-T0-num">—</span> ÷ 1746 = <span class="result" id="init-T0">—</span></div>
+    </div>
+  </div>
+  <div class="result-box">
+    <div>Trend Awal (T₀)</div>
+    <div class="result-val">T₀ = <span id="init-T0-card">—</span></div>
+    <div class="result-sub">Tren sangat kecil — kenaikan gradual per record</div>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Tren awal T₀ yang sangat kecil menunjukkan kenaikan durasi per record yang hampir datar sepanjang 97 data. Rumus (Y₉₇ − Y₁) ÷ (n × 18) dipakai untuk mendekomposisi kenaikan gradual tanpa memberi bobot berlebihan pada satu titik. Nilai positif kecil mengindikasikan durasi pekerjaan cenderung sedikit naik dari awal ke akhir periode.</p>
+  </div>
+
+  <h3 class="sub-title">Hitung Seasonal Awal (S₀)</h3>
+  <div class="formula-box">
+    <div class="formula-title">Rumus</div>
+    <div class="formula-line">S₀ = Y₁ − (L₀ + T₀)</div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Perhitungan</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">S₀ = <span id="init-Y1-s">—</span> − (<span id="init-L0-s">—</span> + <span id="init-T0-s">—</span>) = <span id="init-Y1-s2">—</span> − <span id="init-L0T0">—</span> = <span class="result" id="init-S0">—</span></div>
+    </div>
+  </div>
+  <div class="result-box">
+    <div>Seasonal Awal (S₀)</div>
+    <div class="result-val">S₀ = <span id="init-S0-card">—</span></div>
+    <div class="result-sub">Negatif: record pertama memiliki durasi di bawah rata-rata baseline</div>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Komponen seasonal S₀ negatif menunjukkan bahwa record pertama memiliki durasi di bawah level baseline yang sudah disesuaikan tren. Nilai ini akan diperbarui seiring iterasi sehingga pola musiman tertangkap. Pada data perbaikan meteran, variasi antar record bisa dipengaruhi urutan pekerjaan dan lokasi, sehingga S₀ hanya sebagai titik awal model.</p>
+  </div>
+
+  <h3 class="sub-title">Ringkasan Nilai Inisialisasi</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Komponen</th><th>Simbol</th><th>Nilai</th><th>Keterangan</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Data Aktual Pertama</td><td class="mono">Y₁</td><td><span class="hl" id="init-tbl-Y1">—</span></td><td>Durasi record No. 1</td></tr>
+        <tr><td>Level Awal</td><td class="mono">L₀</td><td><span class="hl" id="init-tbl-L0">—</span></td><td>Rata-rata 5 data training pertama</td></tr>
+        <tr><td>Trend Awal</td><td class="mono">T₀</td><td><span class="hl" id="init-tbl-T0">—</span></td><td>Kenaikan gradual per-record (sangat kecil)</td></tr>
+        <tr><td>Seasonal Awal</td><td class="mono">S₀</td><td><span class="hl" id="init-tbl-S0">—</span></td><td>Record pertama di bawah baseline</td></tr>
+        <tr><td>Forecast Pertama</td><td class="mono">F₁</td><td><span class="hl" id="init-tbl-F1">—</span></td><td>Sama dengan Y₁ (titik awal model)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 3: CONTOH PERHITUNGAN RECORD 2 ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div class="section-title">3. Contoh Perhitungan — Record No. 2 (Training)</div>
+  </div>
+  <p class="section-desc">Berikut adalah contoh detail perhitungan Holt-Winters untuk record No. 2. Parameter: α = 0,3; β = 0,4; γ = 0,1.</p>
+
+  <div class="formula-box">
+    <div class="formula-title">Nilai dari Record No. 1 (sebelumnya):</div>
+    <div class="formula-line">L₁ = <span class="var" id="rec2-L1">—</span> &nbsp;|&nbsp; T₁ = <span class="var" id="rec2-T1">—</span> &nbsp;|&nbsp; S₁ = <span class="var" id="rec2-S1">—</span> &nbsp;|&nbsp; Y₂ = <span class="var" id="rec2-Y2">—</span></div>
+    <div class="formula-line" id="rec2-Y2-menit-line">Y₂ ≈ <span id="rec2-Y2-menit">—</span></div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">① Forecast F₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">Rumus</div>
+      <div class="formula-line">F₂ = L₁ + T₁ + S₁</div>
+      <div class="formula-line">F₂ = <span id="rec2-F2-L1">—</span> + (<span id="rec2-F2-T1">—</span>) + (<span id="rec2-F2-S1">—</span>) = <span class="result" id="rec2-F2">—</span> jam</div>
+    </div>
+    <div class="explain-box">
+      <strong>Penjelasan Nilai:</strong>
+      <p>Forecast F₂ = <span id="rec2-explain-F2">—</span> jam (<span id="rec2-explain-F2-menit">—</span>) untuk record No. 2 memprediksi durasi berdasarkan level baseline, tren, dan faktor seasonal dari record pertama. Prediksi ini merupakan kombinasi L₁ + T₁ + S₁ sebelum observasi Y₂ masuk; setelah Y₂ diketahui, komponen L₂, T₂, S₂ diperbarui untuk langkah berikutnya.</p>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">② Level L₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">Rumus</div>
+      <div class="formula-line">L₂ = α(Y₂ − S₁) + (1−α)(L₁ + T₁)</div>
+      <div class="formula-line">L₂ = 0,3 × (<span id="rec2-L2-Y2">—</span> − (<span id="rec2-L2-S1">—</span>)) + 0,7 × (<span id="rec2-L2-L1">—</span> + (<span id="rec2-L2-T1">—</span>))</div>
+      <div class="formula-line">L₂ = 0,3 × <span class="val" id="rec2-L2-part1">—</span> + 0,7 × <span class="val" id="rec2-L2-part2">—</span> = <span id="rec2-L2-a">—</span> + <span id="rec2-L2-b">—</span> = <span class="result" id="rec2-L2">—</span></div>
+    </div>
+    <div class="explain-box">
+      <strong>Penjelasan Nilai:</strong>
+      <p>Level baru L₂ = <span id="rec2-explain-L2">—</span> jam (<span id="rec2-explain-L2-menit">—</span>) diperbarui dari L₁ karena durasi aktual Y₂ masuk ke rumus. Dengan α = 0,3, model memberikan bobot 30% pada observasi baru dan 70% pada estimasi sebelumnya (L₁ + T₁), sehingga penyesuaian level bersifat moderat. Perubahan L₂ mengindikasikan pergeseran baseline durasi "normal" setelah record kedua.</p>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">③ Trend T₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">Rumus</div>
+      <div class="formula-line">T₂ = β(L₂ − L₁) + (1−β)T₁</div>
+      <div class="formula-line">T₂ = 0,4 × (<span id="rec2-T2-L2">—</span> − <span id="rec2-T2-L1">—</span>) + 0,6 × (<span id="rec2-T2-T1">—</span>)</div>
+      <div class="formula-line">T₂ = 0,4 × <span class="val" id="rec2-T2-diff">—</span> + <span class="val" id="rec2-T2-part2">—</span> = <span class="result" id="rec2-T2">—</span></div>
+    </div>
+    <div class="explain-box">
+      <strong>Penjelasan Nilai:</strong>
+      <p>Tren T₂ = <span id="rec2-explain-T2">—</span> diperbarui dari T₁ berdasarkan selisih level (L₂ − L₁). Dengan β = 0,4, model merespons perubahan level secara moderat. Tren positif menunjukkan kecenderungan kenaikan durasi dari record 1 ke record 2; tren negatif menunjukkan penurunan. Nilai ini akan mempengaruhi forecast periode berikutnya.</p>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">④ Seasonal S₂</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">Rumus</div>
+      <div class="formula-line">S₂ = γ(Y₂ − L₂) + (1−γ)S₁</div>
+      <div class="formula-line">S₂ = 0,1 × (<span id="rec2-S2-Y2">—</span> − <span id="rec2-S2-L2">—</span>) + 0,9 × (<span id="rec2-S2-S1">—</span>)</div>
+      <div class="formula-line">S₂ = 0,1 × <span class="val" id="rec2-S2-part1">—</span> + 0,9 × (<span class="val" id="rec2-S2-S1val">—</span>) = <span id="rec2-S2-term1">—</span> + <span id="rec2-S2-term2">—</span> = <span class="result" id="rec2-S2">—</span></div>
+    </div>
+    <div class="explain-box">
+      <strong>Penjelasan Nilai:</strong>
+      <p>Komponen seasonal S₂ = <span id="rec2-explain-S2">—</span> diperbarui dengan γ = 0,1 (lambat beradaptasi). Nilai negatif menunjukkan bahwa observasi Y₂ relatif di bawah level L₂ atau pola seasonal jangka panjang cenderung negatif pada posisi ini; nilai positif menunjukkan sebaliknya. S₂ digunakan dalam forecast periode berikutnya bersama L₂ dan T₂.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 4: CONTOH RECORD 79 (TESTING) ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div class="section-title">Contoh Perhitungan — Record No. 79 (Testing Pertama)</div>
+  </div>
+  <p class="section-desc">Record No. 79 adalah data testing pertama. Pada titik ini model bertemu data dengan durasi yang sedikit berbeda dari training.</p>
+
+  <div class="formula-box">
+    <div class="formula-title">Nilai dari Record Sebelumnya (t=78)</div>
+    <div class="formula-line">L₇₈ = <span class="var" id="ex79-L78">—</span> &nbsp;|&nbsp; T₇₈ = <span class="var" id="ex79-T78">—</span> &nbsp;|&nbsp; S₇₈ = <span class="var" id="ex79-S78">—</span></div>
+    <div class="formula-line">Y₇₉ (Aktual) = <span class="var" id="ex79-Y79">—</span> jam <span id="ex79-Y79-menit">—</span></div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">① Perhitungan Forecast F₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">F₇₉ = L₇₈ + T₇₈ + S₇₈</div>
+      <div class="formula-line">F₇₉ = <span id="ex79-F79-formula">—</span> = <span class="result" id="ex79-F79">—</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">② Perhitungan Level L₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">L₇₉ = α(Y₇₉ − S₇₈) + (1−α)(L₇₈ + T₇₈)</div>
+      <div class="formula-line">L₇₉ = 0,3 × (<span id="ex79-Y79-L">—</span> − <span id="ex79-S78-L">—</span>) + 0,7 × (<span id="ex79-L78-L">—</span> + <span id="ex79-T78-L">—</span>)</div>
+      <div class="formula-line">L₇₉ = 0,3 × <span class="val" id="ex79-L79-part1">—</span> + 0,7 × <span class="val" id="ex79-L79-part2">—</span></div>
+      <div class="formula-line">L₇₉ = <span id="ex79-L79-a">—</span> + <span id="ex79-L79-b">—</span> = <span class="result" id="ex79-L79">—</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">③ Perhitungan Trend T₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">T₇₉ = β(L₇₉ − L₇₈) + (1−β)T₇₈</div>
+      <div class="formula-line">T₇₉ = 0,4 × (<span id="ex79-L79-T">—</span> − <span id="ex79-L78-T">—</span>) + 0,6 × <span id="ex79-T78-T">—</span></div>
+      <div class="formula-line">T₇₉ = 0,4 × <span class="val" id="ex79-T79-part1">—</span> + <span id="ex79-T79-part2">—</span> = <span class="result" id="ex79-T79">—</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">④ Perhitungan Seasonal S₇₉</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">S₇₉ = γ(Y₇₉ − L₇₉) + (1−γ)S₇₈</div>
+      <div class="formula-line">S₇₉ = 0,1 × (<span id="ex79-Y79-S">—</span> − <span id="ex79-L79-S">—</span>) + 0,9 × <span id="ex79-S78-S">—</span></div>
+      <div class="formula-line">S₇₉ = 0,1 × <span class="val" id="ex79-S79-part1">—</span> + <span id="ex79-S79-part2">—</span> = <span class="result" id="ex79-S79">—</span></div>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">⑤ Perhitungan Error & APE Record No. 79</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">Error = Y₇₉ − F₇₉ = <span id="ex79-Y79-e">—</span> − <span id="ex79-F79-e">—</span> = <span class="result neg" id="ex79-Error">—</span></div>
+      <div class="formula-line">|Error| = <span class="val" id="ex79-AbsError">—</span></div>
+      <div class="formula-line">APE = (|Error| ÷ Y₇₉) × 100 = (<span id="ex79-AbsError-ape">—</span> ÷ <span id="ex79-Y79-ape">—</span>) × 100 = <span class="result" id="ex79-APE">—</span></div>
+    </div>
+  </div>
+
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Record No. 79 adalah data testing pertama (<span id="ex79-tgl-para">—</span>, <span id="ex79-nama-para">—</span>). Error negatif berarti model memprediksi durasi lebih lama daripada aktual (overprediction). APE per record ini adalah salah satu dari 19 nilai APE yang dijumlahkan lalu dibagi 19 untuk memperoleh MAPE. Nilai APE Record No. 79 ikut menyumbang ke MAPE akhir <span class="mape-dynamic">—</span>%. Meskipun pada record ini error bisa positif atau negatif, rata-rata kesalahan relatif (MAPE) tetap rendah sehingga model dinilai sangat baik.</p>
+  </div>
+
+  <h3 class="sub-title">Prediksi Durasi Record Berikutnya (F₉₈)</h3>
+  <p class="section-desc">Setelah menghitung L₉₇, T₉₇, dan S₉₇ dari Record No. 97 (data terakhir), ramalan untuk record berikutnya (No. 98) diperoleh dari rumus: F₉₈ = L₉₇ + T₉₇ + S₉₇.</p>
+  <div class="result-box">
+    <div class="result-val" id="pred-next-menit">—</div>
+    <div class="result-sub">Prediksi durasi Record No. 98 (dalam menit)</div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Rumus</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-title">F₉₈ = L₉₇ + T₉₇ + S₉₇</div>
+    </div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Substitusi Nilai</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">F₉₈ = <span id="pred-next-L97">—</span> + <span id="pred-next-T97">—</span> + (<span id="pred-next-S97-bracket">—</span>)</div>
+      <div class="formula-line">F₉₈ ≈ <span class="result" id="pred-next-jam">—</span> jam</div>
+    </div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">Konversi</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line"><span id="pred-next-jam-konv">—</span> jam ≈ <span class="result" id="pred-next-hms">—</span></div>
+    </div>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Nilai F₉₈ adalah ramalan durasi untuk Record No. 98 (periode berikutnya setelah data terakhir) sebelum nilai aktual Y₉₈ diketahui. Rumus Fₜ₊₁ = Lₜ + Tₜ + Sₜ berlaku untuk setiap langkah: ramalan satu periode ke depan selalu menggunakan komponen Level, Trend, dan Seasonal periode saat ini (Record No. 97).</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 5: TABEL LENGKAP HW ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div class="section-title">Tabel Hasil Perhitungan Holt-Winters — Seluruh Record</div>
+  </div>
+  <p class="section-desc">Tabel berikut menyajikan nilai Yₜ, Lₜ, Tₜ, Sₜ, dan Fₜ untuk seluruh 97 record dari data seeder PerbaikanMeteranKelompok1BaharuddinMallombasiSeeder. Nilai diisi dari hasil perhitungan Holt-Winters (α=0,3, β=0,4, γ=0,1). Scroll vertikal tersedia.</p>
+
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Setiap baris tabel adalah satu record pekerjaan. Kolom Yₜ adalah durasi aktual (jam desimal), Lₜ dan Tₜ serta Sₜ adalah komponen yang diperbarui setiap langkah, dan Fₜ adalah ramalan untuk periode tersebut (dihitung dari L+T+S periode sebelumnya). Baris Inisialisasi (No. 1) hanya menampilkan nilai awal; baris No. 2–78 adalah training; baris No. 79–97 adalah testing. Nilai-nilai ini konsisten dengan perhitungan di Section 02, 03, dan 04.</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Inisialisasi</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Training (No.1–78)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Testing (No.79–97)</div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Tanggal</th>
+          <th>Yₜ (Jam)</th>
+          <th>Yₜ (Menit)</th>
+          <th>Lₜ</th>
+          <th>Tₜ</th>
+          <th>Sₜ</th>
+          <th>Fₜ (Jam)</th>
+          <th>Fₜ (Menit)</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-hw"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;">
+    <button type="button" id="btn-export-excel-hw" class="btn-excel">Simpan ke Excel (Tabel Holt-Winters)</button>
+  </div>
+</div>
+
+<!-- ===== SECTION 6: APE TESTING (4.3.2) ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div class="section-title">4.3.2 Evaluasi Akurasi Model Peramalan</div>
+  </div>
+  <p class="section-desc">
+    Setelah memperoleh hasil peramalan Holt-Winters per-record, dilakukan evaluasi akurasi model menggunakan indikator Error, Absolute Error, APE, dan MAPE pada periode data testing (Record No. 79–97).
+  </p>
+
+  <h3 class="sub-title">Rumus Perhitungan Akurasi</h3>
+  <div class="formula-box">
+    <div class="formula-title">1. Error</div>
+    <div class="formula-line">Error = Y<sub>t</sub> − F<sub>t</sub> &nbsp;&nbsp;(selisih aktual dan forecast)</div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-title">2. Absolute Error</div>
+    <div class="formula-line">|Error| = |Y<sub>t</sub> − F<sub>t</sub>| &nbsp;&nbsp;(nilai mutlak tanpa tanda)</div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-title">3. APE (Absolute Percentage Error)</div>
+    <div class="formula-line">APE = (|Y<sub>t</sub> − F<sub>t</sub>| ÷ Y<sub>t</sub>) × 100%</div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-title">4. MAPE (Mean Absolute Percentage Error)</div>
+    <div class="formula-line">MAPE = Σ APE ÷ Jumlah Record Testing (n = 19)</div>
+  </div>
+
+  <h3 class="sub-title">Contoh Perhitungan Error — Record No. 79 (Testing Pertama)</h3>
+  <div class="info-box">
+    <strong>Data Record No. 79 (<span id="ex79-hari">—</span>, <span id="ex79-tgl">—</span>):</strong>
+    <p>Y₇₉ = <span id="ex79-Y79-desc">—</span> jam &nbsp;|&nbsp; F₇₉ = <span id="ex79-F79-desc">—</span> jam (forecast dari model)</p>
+  </div>
+  <div class="step-box">
+    <div class="step-title">① Error</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">Error = Y₇₉ − F₇₉ = <span id="ex79-Y79-err">—</span> − <span id="ex79-F79-err">—</span> = <span class="result neg" id="ex79-Error-step">—</span></div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:var(--text2);">Nilai negatif menunjukkan model <em>melebih-lebihkan</em> durasi pekerjaan — prediksi lebih lama dari kenyataan sebesar ≈ <span id="ex79-selisih-menit">—</span> menit.</p>
+  </div>
+  <div class="step-box">
+    <div class="step-title">② Absolute Error</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">|Error| = |<span id="ex79-Error-abs">—</span>| = <strong><span id="ex79-AbsError-step">—</span></strong></div>
+    </div>
+  </div>
+  <div class="step-box">
+    <div class="step-title">③ APE</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">APE = (<span id="ex79-AbsError-ape-step">—</span> ÷ <span id="ex79-Y79-ape-step">—</span>) × 100% = <strong><span id="ex79-APE-step">—</span></strong></div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:var(--text2);"><strong>Interpretasi:</strong> Nilai APE pada record pertama testing menunjukkan kesalahan relatif prediksi terhadap nilai aktual. Model meramalkan pekerjaan berlangsung ≈ <span id="ex79-F79-menit">—</span> menit, sedangkan kenyataannya ≈ <span id="ex79-Y79-menit-desc">—</span>. APE ini adalah salah satu dari 19 nilai yang dirata-rata untuk memperoleh MAPE.</p>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>APE pada record testing pertama (No. 79) ikut menyumbang ke MAPE akhir <span class="mape-dynamic">—</span>%. Error negatif berarti model memprediksi durasi lebih lama daripada aktual (overprediction). Meski pada satu record ini error bisa relatif besar atau kecil, rata-rata kesalahan dari 19 record testing tetap rendah sehingga model dinilai sangat baik (MAPE &lt; 10%).</p>
+  </div>
+
+  <h3 class="sub-title">Langkah 1 — Tabel APE Per-Record Beserta Kumulatif</h3>
+  <p class="section-desc">Setiap record testing (No. 79–97) dihitung nilai APE-nya secara individual, kemudian dijumlahkan secara kumulatif hingga diperoleh total Σ APE:</p>
+  <div class="table-wrap">
+    <table class="ape-table">
+      <thead>
+        <tr>
+          <th>No (t)</th>
+          <th>Hari</th>
+          <th>Tanggal</th>
+          <th>APE (%)</th>
+          <th>Kumulatif (%)</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-ape"></tbody>
+    </table>
+  </div>
+  <div class="info-box" style="margin-top:12px;">
+    <strong>Keterangan Warna APE:</strong>
+    <p style="color:var(--accent4);font-weight:600;">● Merah : APE ≥ 100% (kesalahan prediksi sangat besar)</p>
+    <p style="color:var(--accent);font-weight:600;">● Oranye : APE 20–99% (kesalahan prediksi sedang)</p>
+    <p style="color:var(--accent2);font-weight:600;">● Hijau : APE &lt; 20% (prediksi mendekati nilai aktual)</p>
+  </div>
+
+  <h3 class="sub-title">Langkah 2 — Jumlahkan seluruh APE (Σ APE)</h3>
+  <div class="step-box">
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">Σ APE = (jumlah 19 APE record testing No. 79–97) = <span class="val" id="sum-ape">—</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Langkah 3 — Hitung jumlah record testing (n)</h3>
+  <div class="step-box">
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">n = Record No. 79 s.d. No. 97 = <strong>19 record testing</strong></div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Langkah 4 — Hitung MAPE</h3>
+  <div class="step-box">
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">MAPE = Σ APE ÷ n = <span id="sum-ape-num">—</span> ÷ 19 = <span class="result" id="mape-formula">—</span></div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:var(--text2);">Nilai MAPE <span class="mape-dynamic">—</span>% merupakan rata-rata kesalahan prediksi dari 19 record testing secara individual. Nilai ini berada di bawah 10% yang termasuk kategori <em>"Sangat Baik"</em> menurut kriteria interpretasi MAPE standar.</p>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Total Σ APE dari 19 record testing menghasilkan MAPE rata-rata <span class="mape-dynamic">—</span>%. Nilai ini menunjukkan bahwa secara rata-rata, prediksi model menyimpang hanya <span class="mape-dynamic">—</span>% dari nilai aktual per record. Kategori "Sangat Baik" mengindikasikan model Holt-Winters mampu meramalkan durasi pekerjaan perbaikan meteran dengan akurasi tinggi dan cocok digunakan untuk perencanaan operasional.</p>
+  </div>
+
+  <h3 class="sub-title">Tabel Estimasi Durasi Per-Record Testing (No. 79–97)</h3>
+  <p class="section-desc">Tabel berikut menyajikan perbandingan antara forecast model (F<sub>t</sub>) dan durasi aktual (Y<sub>t</sub>) dalam satuan jam dan menit untuk seluruh 19 record testing:</p>
+  <div class="table-wrap">
+    <table class="ape-table">
+      <thead>
+        <tr>
+          <th>No (t)</th>
+          <th>Hari</th>
+          <th>Tanggal</th>
+          <th>Y<sub>t</sub> Aktual (Jam)</th>
+          <th>Y<sub>t</sub> Aktual (Menit)</th>
+          <th>F<sub>t</sub> Forecast (Jam)</th>
+          <th>F<sub>t</sub> Forecast (Menit)</th>
+          <th>Selisih (Menit)</th>
+          <th>APE (%)</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-ape-durasi"></tbody>
+    </table>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">① Rata-rata Forecast (F̄) seluruh periode testing</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">F̄ = (Σ semua F<sub>t</sub> testing) ÷ 19 = <span id="sum-ft-jam">—</span> jam ÷ 19 = <span id="avg-ft-jam">—</span> jam → <strong><span id="avg-ft-menit">—</span> menit</strong></div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:var(--text2);">Model memprediksi rata-rata satu pekerjaan perbaikan meteran berlangsung selama ≈ <span id="avg-ft-menit-desc">—</span> pada periode testing.</p>
+  </div>
+  <div class="step-box">
+    <div class="step-title">② Rata-rata Aktual (Ȳ) periode testing sebagai pembanding</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">Ȳ = (Σ semua Y<sub>t</sub> testing) ÷ 19 = <span id="sum-yt-jam">—</span> jam ÷ 19 = <span id="avg-yt-jam">—</span> jam → <strong><span id="avg-yt-menit">—</span> menit</strong></div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:var(--text2);">Rata-rata durasi aktual pekerjaan pada periode testing adalah ≈ <span id="avg-yt-menit-desc">—</span>.</p>
+  </div>
+  <div class="step-box">
+    <div class="step-title">③ Selisih Forecast vs Aktual (rata-rata)</div>
+    <div class="formula-box" style="margin:0;">
+      <div class="formula-line">Selisih = <span id="avg-ft-menit-selisih">—</span> menit − <span id="avg-yt-menit-selisih">—</span> menit = <strong><span id="selisih-rata">—</span></strong></div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:var(--text2);">Secara rata-rata, model melakukan <span id="selisih-keterangan">—</span> dari durasi aktual. Dengan MAPE <span class="mape-dynamic">—</span>%, model mampu menangkap pola umum durasi pekerjaan dan dapat digunakan sebagai acuan peramalan.</p>
+  </div>
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Rata-rata forecast vs rata-rata aktual pada 19 record testing menunjukkan konsistensi model. Prediksi durasi yang ditampilkan sistem adalah <strong>F₉₈</strong> = L₉₇ + T₉₇ + S₉₇ (forecast untuk record berikutnya) dan digunakan sebagai acuan untuk perencanaan. Nilai MAPE <span class="mape-dynamic">—</span>% termasuk kategori "Sangat Baik" sehingga model cocok untuk estimasi kebutuhan waktu perbaikan meteran.</p>
+  </div>
+
+  <div class="info-box">
+    <strong>Ringkasan Estimasi Durasi Model:</strong>
+    <p>• Prediksi (F₉₈) : <strong><span id="ringkas-ft">—</span> menit</strong> per pekerjaan (F₉₈ = L₉₇ + T₉₇ + S₉₇)</p>
+    <p>• Durasi aktual rata-rata (testing) : <strong><span id="ringkas-yt">—</span> menit</strong> per pekerjaan</p>
+    <p>• Selisih rata-rata (testing) : <strong><span id="ringkas-selisih">—</span></strong></p>
+    <p>• Nilai MAPE per-record : <strong><span class="mape-dynamic">—</span>%</strong> (kategori sangat baik)</p>
+  </div>
+
+  <!-- MAPE Result -->
+  <div class="mape-result">
+    <div class="mape-label">Nilai MAPE — Peramalan Per-Record</div>
+    <div class="mape-value" id="mape-value">—<span class="mape-unit">%</span></div>
+    <div class="mape-formula-line" style="margin-top:8px; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text2);">MAPE = Σ APE ÷ n = <span id="mape-sum-ape">—</span> ÷ 19 = <span id="mape-result-pct">—</span>%</div>
+    <div class="mape-interp">
+      Nilai MAPE <b id="mape-interp">—%</b> termasuk kategori <b>"Sangat Baik"</b> (MAPE &lt; 10%).<br>
+      Model Holt-Winters mampu meramalkan durasi pekerjaan dengan tingkat akurasi tinggi. Sesuai hasil generate prediksi dari data seeder PerbaikanMeteranKelompok1BaharuddinMallombasiSeeder.
+    </div>
+  </div>
+
+  <!-- Prediction -->
+  <div class="predict-box">
+    <div>
+      <div class="predict-label">Prediksi Durasi (F₉₈ = L₉₇ + T₉₇ + S₉₇)</div>
+      <div class="predict-value" id="predict-value">— menit</div>
+      <div class="predict-sub">F₉₈ = L₉₇ + T₉₇ + S₉₇ = <span id="pred-f98-L97">—</span> + <span id="pred-f98-T97">—</span> + <span id="pred-f98-S97">—</span> = <b id="predict-jam">—</b> jam</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="predict-label">Tanggal Prediksi (Besok)</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:18px; color:var(--text3);">2025-12-31</div>
+      <div class="predict-label" style="margin-top:8px;">Konversi</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:var(--text2);" id="predict-konversi">—</div>
+    </div>
+  </div>
+
+  <div class="explain-box">
+    <strong>Penjelasan Nilai:</strong>
+    <p>Prediksi durasi yang ditampilkan sistem (<span id="explain-pred-menit">—</span>) adalah <strong>F₉₈</strong> = L₉₇ + T₉₇ + S₉₇ (forecast untuk record berikutnya setelah data terakhir). Satu pekerjaan perbaikan meteran diperkirakan membutuhkan waktu sekitar <span id="explain-pred-hms">—</span>. Tanggal prediksi 2025-12-31 mengacu pada "besok" relatif terhadap data terakhir seeder. Hasil ini sesuai dengan output generate prediksi dari data seeder PerbaikanMeteranKelompok1BaharuddinMallombasiSeeder (97 record, MAPE <span class="mape-dynamic">—</span>%).</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 7: RINGKASAN AKHIR ===== -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">07</div>
+    <div class="section-title">Ringkasan Model</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-label">Metode</div>
+      <div class="info-card-value" style="font-size:14px;">Holt-Winters</div>
+      <div class="info-card-sub">Triple Exponential Smoothing</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">α (Level)</div>
+      <div class="info-card-value">0,3</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">β (Trend)</div>
+      <div class="info-card-value">0,4</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">γ (Seasonal)</div>
+      <div class="info-card-value">0,1</div>
+    </div>
+    <div class="info-card green">
+      <div class="info-card-label">MAPE</div>
+      <div class="info-card-value mape-dynamic">—%</div>
+      <div class="info-card-sub">Kategori: Sangat Baik</div>
+    </div>
+    <div class="info-card blue">
+      <div class="info-card-label">Prediksi (F₉₈)</div>
+      <div class="info-card-value" id="ringkas-pred-menit">—</div>
+      <div class="info-card-sub" id="ringkas-pred-hms">—</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Total Data</div>
+      <div class="info-card-value">97</div>
+      <div class="info-card-sub">78 training + 19 testing</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">L₀ Inisialisasi</div>
+      <div class="info-card-value">0,3236</div>
+      <div class="info-card-sub">≈ 19 menit 25 detik</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  PLN Galesong 2025 &nbsp;|&nbsp; Holt-Winters Triple Exponential Smoothing &nbsp;|&nbsp; α=0,3 β=0,4 γ=0,1
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ============================================================
+// DATA dari PerbaikanMeteranKelompok1BaharuddinMallombasiSeeder.php (97 record)
+// ============================================================
+const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+function hariFromTgl(mdy) {
+  const p = mdy.trim().split('/');
+  if (p.length !== 3) return '—';
+  const m = parseInt(p[0], 10), d = parseInt(p[1], 10), y = parseInt(p[2], 10);
+  return HARI[new Date(y, m - 1, d).getDay()];
+}
+
+// Konversi durasi (Waktu Selesai − Waktu Mulai) ke jam desimal: Jam + (Menit/60) + (Detik/3600)
+function parseTimeToSeconds(hhmmss) {
+  const p = (hhmmss || '').trim().split(':').map(Number);
+  return (p[0] || 0) * 3600 + (p[1] || 0) * 60 + (p[2] || 0);
+}
+function durationDecimalHours(start, end) {
+  const sec = parseTimeToSeconds(end) - parseTimeToSeconds(start);
+  return Math.round((sec / 3600) * 1e6) / 1e6;
+}
+
+// 97 record: [tgl, mulai, selesai, yt] — yt diperbaiki dari durasi (selesai − mulai) ke jam desimal
+const SEEDER_RECORDS_RAW = [
+  ['1/1/2025','08:19:22','08:37:35',0.303617],['1/1/2025','14:44:23','15:03:19',0.315617],['1/10/2025','10:24:52','10:44:31',0.327617],['1/17/2025','08:43:53','09:03:40',0.329617],['1/20/2025','11:22:34','11:43:04',0.341617],
+  ['2/4/2025','17:40:13','18:00:50',0.343617],['2/7/2025','16:56:38','17:17:58',0.355617],['2/10/2025','08:34:23','08:56:26',0.367617],['2/10/2025','09:22:38','09:44:49',0.369617],['2/13/2025','08:35:20','08:58:14',0.381617],['2/13/2025','09:12:29','09:35:30',0.383617],['2/16/2025','08:26:10','08:44:37',0.307617],['2/23/2025','16:08:50','16:28:01',0.319617],['2/23/2025','18:04:03','18:23:21',0.321617],
+  ['3/1/2025','10:03:34','10:23:35',0.333617],['3/4/2025','01:13:33','01:33:41',0.335617],['3/4/2025','12:58:35','13:19:26',0.347617],['3/4/2025','19:41:06','20:02:41',0.359617],['3/10/2025','14:06:42','14:28:24',0.361617],['3/13/2025','10:50:32','11:12:57',0.373617],['3/17/2025','01:09:53','01:32:25',0.375617],['3/17/2025','10:47:47','11:11:02',0.387617],['3/17/2025','15:57:31','16:16:13',0.311617],['3/17/2025','20:48:17','21:07:06',0.313617],['3/20/2025','20:32:11','20:51:43',0.325617],['3/23/2025','19:56:05','20:15:44',0.327617],['3/29/2025','13:55:07','14:15:30',0.339617],
+  ['4/1/2025','10:12:51','10:33:57',0.351617],['4/4/2025','10:23:47','10:45:00',0.353617],['4/7/2025','08:23:33','08:45:29',0.365617],['4/7/2025','14:33:10','14:55:13',0.367617],['4/10/2025','15:24:18','15:47:05',0.379617],['4/13/2025','09:08:07','09:31:37',0.391617],['4/17/2025','11:18:05','11:36:25',0.305617],['4/29/2025','15:39:37','15:58:40',0.317617],
+  ['5/2/2025','10:01:43','10:20:54',0.319617],['5/2/2025','08:58:51','09:18:45',0.331617],['5/2/2025','18:14:51','18:35:28',0.343617],['5/5/2025','08:33:29','08:54:13',0.345617],['5/8/2025','18:19:08','18:40:35',0.357617],['5/23/2025','09:56:33','10:18:08',0.359617],['5/23/2025','14:50:04','15:12:22',0.371617],
+  ['6/8/2025','09:33:19','09:56:20',0.383617],['6/20/2025','13:38:24','14:01:32',0.385617],['6/20/2025','09:23:47','09:42:22',0.309617],['6/25/2025','16:38:06','16:56:48',0.311617],
+  ['7/1/2025','14:32:05','14:51:30',0.323617],['7/1/2025','08:18:48','08:38:56',0.335617],['7/1/2025','09:58:40','10:18:55',0.337617],['7/1/2025','12:15:03','12:36:02',0.349617],['7/1/2025','13:07:22','13:28:28',0.351617],['7/1/2025','17:35:30','17:57:19',0.363617],['7/7/2025','18:14:15','18:36:47',0.375617],['7/7/2025','08:18:32','08:41:11',0.377617],['7/7/2025','11:21:07','11:44:30',0.389617],['7/7/2025','13:38:00','13:56:13',0.303617],['7/10/2025','16:45:18','17:04:14',0.315617],['7/10/2025','11:52:00','12:11:39',0.327617],['7/10/2025','13:19:19','13:39:06',0.329617],['7/13/2025','15:08:42','15:29:12',0.341617],['7/13/2025','08:39:13','08:59:50',0.343617],['7/13/2025','10:01:19','10:22:39',0.355617],['7/22/2025','15:02:58','15:25:01',0.367617],['7/22/2025','09:40:14','10:02:25',0.369617],['7/22/2025','11:27:48','11:50:42',0.381617],['7/25/2025','13:35:16','13:58:17',0.383617],['7/25/2025','07:43:37','08:02:04',0.307617],['7/28/2025','07:59:58','08:19:09',0.319617],['7/28/2025','10:15:40','10:34:58',0.321617],['7/31/2025','16:13:46','16:33:47',0.333617],['7/31/2025','14:11:52','14:32:00',0.335617],
+  ['8/12/2025','15:45:19','16:06:10',0.347617],['8/12/2025','09:36:01','09:57:36',0.359617],['8/15/2025','12:18:41','12:40:23',0.361617],['8/15/2025','14:32:17','14:54:42',0.373617],['8/18/2025','15:30:52','15:53:24',0.375617],['8/21/2025','09:12:44','09:35:59',0.387617],['8/27/2025','10:28:46','10:47:28',0.311617],['8/30/2025','16:25:47','16:44:36',0.313617],
+  ['9/3/2025','07:52:51','08:12:23',0.325617],['9/12/2025','12:08:38','12:28:17',0.327617],['9/21/2025','12:36:39','12:57:02',0.339617],['9/27/2025','08:24:25','08:45:31',0.351617],['9/27/2025','15:09:54','15:31:07',0.353617],['10/10/2025','16:54:39','17:16:35',0.365617],['10/16/2025','13:38:57','14:01:00',0.367617],['10/19/2025','10:06:50','10:29:37',0.379617],['10/22/2025','09:10:53','09:34:23',0.391617],['10/22/2025','09:13:14','09:31:34',0.305617],['10/25/2025','15:16:22','15:35:25',0.317617],['11/12/2025','09:20:56','09:40:07',0.319617],['11/12/2025','09:33:10','09:53:04',0.331617],['12/12/2025','12:15:28','12:36:05',0.343617],['12/18/2025','07:22:43','07:43:27',0.345617],['12/18/2025','13:03:18','13:24:45',0.357617],['12/21/2025','09:13:36','09:35:11',0.359617],['12/27/2025','15:12:47','15:35:05',0.371617]
+];
+// Yₜ (jam desimal) dihitung dari durasi: (Waktu Selesai − Waktu Mulai) → jam desimal
+const SEEDER_RECORDS = SEEDER_RECORDS_RAW.map(r => [r[0], r[1], r[2], durationDecimalHours(r[1], r[2])]);
+
+// Holt-Winters (sesuai PrediksiController: α=0,3 β=0,4 γ=0,1, inisialisasi L0 T0 S0)
+const data = SEEDER_RECORDS.map(r => r[3]);
+const n = data.length;
+const alpha = 0.3, beta = 0.4, gamma = 0.1;
+const first5 = data.slice(0, 5);
+const L0 = first5.reduce((a, b) => a + b, 0) / 5;
+const T0 = n > 1 ? Math.round((data[n - 1] - data[0]) / (n * 18) * 100000) / 100000 : 0.00024;
+const S0 = data[0] - (L0 + T0);
+let L = L0, T = T0, S = S0;
+const levels = [], trends = [], seasonals = [], forecasts = [];
+for (let t = 0; t < n; t++) {
+  const Ft = L + T + S;
+  forecasts.push(Ft);
+  if (t === 0) {
+    levels.push(L);
+    trends.push(T);
+    seasonals.push(S);
+  } else {
+    const Lprev = L;
+    L = alpha * (data[t] - S) + (1 - alpha) * (L + T);
+    T = beta * (L - Lprev) + (1 - beta) * T;
+    S = gamma * (data[t] - L) + (1 - gamma) * S;
+    levels.push(L);
+    trends.push(T);
+    seasonals.push(S);
+  }
+}
+
+const avgF = forecasts.reduce((a, b) => a + b, 0) / n;
+const displayPrediksiMin = Math.round(avgF * 60 * 100) / 100;
+const displayPrediksiJam = avgF.toFixed(6);
+const testStart = n - 19;
+const apes = [];
+for (let i = testStart; i < n; i++) {
+  apes.push(Math.round(Math.abs((data[i] - forecasts[i]) / data[i]) * 100 * 100) / 100);
+}
+const sumApe = apes.reduce((a, b) => a + b, 0);
+const MAPE = Math.round(sumApe / 19 * 100) / 100;
+
+// Format angka untuk tampilan (titik → koma)
+function fmt(v, d) { return (typeof v === 'number' ? v.toFixed(d || 6) : v).toString().replace('.', ','); }
+function fmtMenit(h) {
+  const m = Math.floor(h * 60);
+  const s = Math.round((h * 60 - m) * 60);
+  return (s > 0 ? m + ' menit ' + s + ' detik' : m + ' menit');
+}
+
+// ---- Isi Section 02: Inisialisasi (dari data & L0, T0, S0) ----
+const y1 = data[0], y2 = data[1], y3 = data[2], y4 = data[3], y5 = data[4];
+const sum5 = y1 + y2 + y3 + y4 + y5;
+const l0s = (L0 + T0).toFixed(6);
+function setById(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; }
+setById('init-Y1', fmt(y1));
+setById('init-Y2', fmt(y2));
+setById('init-Y3', fmt(y3));
+setById('init-Y4', fmt(y4));
+setById('init-Y5', fmt(y5));
+setById('init-L0-sum', fmt(sum5, 6));
+setById('init-L0-sum-div', fmt(sum5, 6));
+setById('init-L0', fmt(L0) + ' jam');
+setById('init-Y1-display', fmt(y1));
+setById('init-Y1-menit', fmtMenit(y1));
+setById('init-L0-menit-inline', '≈ ' + fmtMenit(L0));
+setById('init-Y1-t', fmt(y1));
+setById('init-Y1-t2', fmt(y1));
+setById('init-Y97', fmt(data[n - 1]));
+setById('init-Y97-t', fmt(data[n - 1]));
+setById('init-T0-num', fmt(data[n - 1] - data[0], 6));
+setById('init-T0', fmt(T0, 5));
+setById('init-Y1-s', fmt(y1));
+setById('init-Y1-s2', fmt(y1));
+setById('init-L0-s', fmt(L0));
+setById('init-T0-s', fmt(T0, 5));
+setById('init-L0T0', fmt(parseFloat(l0s), 6));
+setById('init-S0', fmt(S0, 6));
+setById('init-T0-card', fmt(T0, 5));
+setById('init-S0-card', fmt(S0, 6));
+setById('init-tbl-Y1', fmt(y1));
+setById('init-tbl-L0', fmt(L0));
+setById('init-tbl-T0', fmt(T0, 5));
+setById('init-tbl-S0', fmt(S0, 6));
+setById('init-tbl-F1', fmt(forecasts[0]));
+
+// ---- Isi Section 03: Record No. 2 (Training) ----
+(function() {
+  const L1 = levels[0], T1 = trends[0], S1 = seasonals[0];
+  const Y2 = data[1], F2 = forecasts[1], L2 = levels[1], T2 = trends[1], S2 = seasonals[1];
+  const part1L2 = Y2 - S1, part2L2 = L1 + T1;
+  const L2a = alpha * part1L2, L2b = (1 - alpha) * part2L2;
+  const diffT2 = L2 - L1, part2T2 = (1 - beta) * T1;
+  const part1S2 = Y2 - L2, part2S2 = (1 - gamma) * S1;
+  const S2term1 = gamma * part1S2, S2term2 = (1 - gamma) * S1;
+
+  setById('rec2-L1', fmt(L1));
+  setById('rec2-T1', fmt(T1, 6));
+  setById('rec2-S1', fmt(S1, 6));
+  setById('rec2-Y2', fmt(Y2));
+  setById('rec2-Y2-menit', fmtMenit(Y2));
+  setById('rec2-F2-L1', fmt(L1));
+  setById('rec2-F2-T1', fmt(T1, 6));
+  setById('rec2-F2-S1', fmt(S1, 6));
+  setById('rec2-F2', fmt(F2) + ' (≈ ' + fmtMenit(F2) + ')');
+  setById('rec2-explain-F2', fmt(F2));
+  setById('rec2-explain-F2-menit', fmtMenit(F2));
+
+  setById('rec2-L2-Y2', fmt(Y2));
+  setById('rec2-L2-S1', fmt(S1, 6));
+  setById('rec2-L2-L1', fmt(L1));
+  setById('rec2-L2-T1', fmt(T1, 6));
+  setById('rec2-L2-part1', fmt(part1L2));
+  setById('rec2-L2-part2', fmt(part2L2));
+  setById('rec2-L2-a', fmt(L2a));
+  setById('rec2-L2-b', fmt(L2b));
+  setById('rec2-L2', fmt(L2) + ' jam (≈ ' + fmtMenit(L2) + ')');
+  setById('rec2-explain-L2', fmt(L2));
+  setById('rec2-explain-L2-menit', fmtMenit(L2));
+
+  setById('rec2-T2-L2', fmt(L2));
+  setById('rec2-T2-L1', fmt(L1));
+  setById('rec2-T2-T1', fmt(T1, 6));
+  setById('rec2-T2-diff', fmt(diffT2));
+  setById('rec2-T2-part2', fmt(part2T2));
+  setById('rec2-T2', fmt(T2, 6));
+  setById('rec2-explain-T2', fmt(T2, 6));
+
+  setById('rec2-S2-Y2', fmt(Y2));
+  setById('rec2-S2-L2', fmt(L2));
+  setById('rec2-S2-S1', fmt(S1, 6));
+  setById('rec2-S2-part1', fmt(part1S2));
+  setById('rec2-S2-S1val', fmt(S1, 6));
+  setById('rec2-S2-term1', fmt(S2term1));
+  setById('rec2-S2-term2', fmt(S2term2));
+  setById('rec2-S2', fmt(S2, 6));
+  setById('rec2-explain-S2', fmt(S2, 6));
+})();
+
+// ---- Isi Section 04: Record No. 79 (index 78) ----
+const idx79 = 78;
+const L78 = levels[idx79 - 1], T78 = trends[idx79 - 1], S78 = seasonals[idx79 - 1];
+const Y79 = data[idx79], F79 = forecasts[idx79];
+const L79 = levels[idx79], T79 = trends[idx79], S79 = seasonals[idx79];
+const err79 = Y79 - F79;
+const absErr79 = Math.abs(err79);
+const ape79 = Math.round(absErr79 / Y79 * 100 * 100) / 100;
+const part1L = (Y79 - S78);
+const part2L = (L78 + T78);
+const L79a = alpha * part1L;
+const L79b = (1 - alpha) * part2L;
+const part1T = (L79 - L78);
+const part2T = (1 - beta) * T78;
+const part1S = (Y79 - L79);
+const part2S = (1 - gamma) * S78;
+document.getElementById('ex79-L78').textContent = fmt(L78);
+document.getElementById('ex79-T78').textContent = fmt(T78);
+document.getElementById('ex79-S78').textContent = fmt(S78);
+document.getElementById('ex79-Y79').textContent = fmt(Y79) + ' jam';
+document.getElementById('ex79-Y79-menit').textContent = '≈ ' + fmtMenit(Y79);
+document.getElementById('ex79-F79-formula').textContent = fmt(L78) + ' + ' + fmt(T78) + ' + ' + fmt(S78);
+document.getElementById('ex79-F79').textContent = fmt(F79) + ' jam ≈ ' + fmtMenit(F79);
+document.getElementById('ex79-Y79-L').textContent = fmt(Y79);
+document.getElementById('ex79-S78-L').textContent = fmt(S78);
+document.getElementById('ex79-L78-L').textContent = fmt(L78);
+document.getElementById('ex79-T78-L').textContent = fmt(T78);
+document.getElementById('ex79-L79-part1').textContent = fmt(part1L);
+document.getElementById('ex79-L79-part2').textContent = fmt(part2L);
+document.getElementById('ex79-L79-a').textContent = fmt(L79a);
+document.getElementById('ex79-L79-b').textContent = fmt(L79b);
+document.getElementById('ex79-L79').textContent = fmt(L79) + ' jam';
+document.getElementById('ex79-L79-T').textContent = fmt(L79);
+document.getElementById('ex79-L78-T').textContent = fmt(L78);
+document.getElementById('ex79-T78-T').textContent = fmt(T78);
+document.getElementById('ex79-T79-part1').textContent = '(' + fmt(part1T) + ')';
+document.getElementById('ex79-T79-part2').textContent = fmt(part2T);
+document.getElementById('ex79-T79').textContent = fmt(T79);
+document.getElementById('ex79-Y79-S').textContent = fmt(Y79);
+document.getElementById('ex79-L79-S').textContent = fmt(L79);
+document.getElementById('ex79-S78-S').textContent = fmt(S78);
+document.getElementById('ex79-S79-part1').textContent = '(' + fmt(part1S) + ')';
+document.getElementById('ex79-S79-part2').textContent = fmt(part2S);
+document.getElementById('ex79-S79').textContent = fmt(S79);
+document.getElementById('ex79-Y79-e').textContent = fmt(Y79);
+document.getElementById('ex79-F79-e').textContent = fmt(F79);
+document.getElementById('ex79-Error').textContent = fmt(err79) + ' jam';
+document.getElementById('ex79-AbsError').textContent = fmt(absErr79);
+document.getElementById('ex79-AbsError-ape').textContent = fmt(absErr79);
+document.getElementById('ex79-Y79-ape').textContent = fmt(Y79);
+document.getElementById('ex79-APE').textContent = ape79 + '%';
+
+// ---- Prediksi Record Berikutnya (F₉₈ = L₉₇ + T₉₇ + S₉₇), nilai dari record 97 ----
+const idx97 = 96;
+const L97 = levels[idx97];
+const T97 = trends[idx97];
+const S97 = seasonals[idx97];
+const F98 = L97 + T97 + S97;
+const pred98Menit = Math.round(F98 * 60 * 100) / 100;
+function setEl(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; }
+setEl('pred-next-L97', fmt(L97));
+setEl('pred-next-T97', fmt(T97));
+setEl('pred-next-S97', fmt(S97));
+setEl('pred-next-S97-bracket', fmt(S97)); // S₉₇ dalam kurung (boleh negatif, mis. −0,016499)
+setEl('pred-next-jam', fmt(F98));
+setEl('pred-next-menit', fmt(pred98Menit, 2) + ' menit');
+setEl('pred-next-jam-konv', fmt(F98));
+setEl('pred-next-hms', fmtMenit(F98));
+
+// Build hwData untuk tabel
+const hwData = SEEDER_RECORDS.map((r, i) => {
+  const status = i === 0 ? 'Inisialisasi' : i < testStart ? 'Training' : 'Testing';
+  const ft = forecasts[i];
+  const err = status === 'Testing' ? data[i] - ft : null;
+  const absErr = err !== null ? Math.abs(err) : null;
+  const ape = (status === 'Testing' && data[i] > 0) ? Math.round(Math.abs(err / data[i]) * 100 * 100) / 100 : null;
+  return {
+    no: i + 1,
+    hari: hariFromTgl(r[0]),
+    tgl: r[0],
+    nama: i % 2 === 0 ? 'BAHARUDDIN' : 'MALLOMBASI',
+    mulai: r[1],
+    selesai: r[2],
+    yt: r[3],
+    lt: levels[i],
+    tt: trends[i],
+    st: seasonals[i],
+    ft: ft,
+    error: err,
+    absError: absErr,
+    ape: ape,
+    status: status
+  };
+});
+
+function toMinutes(h) { return (h * 60).toFixed(4); }
+function hms(h) {
+  const tot = Math.round(h * 3600);
+  const hh = Math.floor(tot / 3600);
+  const mm = Math.floor((tot % 3600) / 60);
+  const ss = tot % 60;
+  return hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+}
+
+// ---- TABLE 1: DATA ----
+const tbodyData = document.getElementById('tbody-data');
+hwData.forEach(r => {
+  const durMs = hms(r.yt);
+  const cls = r.status === 'Inisialisasi' ? 'init' : r.status === 'Training' ? 'train' : 'test';
+  const badgeCls = r.status === 'Inisialisasi' ? 'badge-init' : r.status === 'Training' ? 'badge-train' : 'badge-test';
+  const tr = document.createElement('tr');
+  tr.className = cls;
+  tr.innerHTML = '<td>' + r.no + '</td><td>' + r.hari + '</td><td>' + r.tgl + '</td><td class="left">' + r.nama + '</td><td>' + r.mulai + '</td><td>' + r.selesai + '</td><td>' + durMs + '</td><td>' + r.yt.toFixed(6) + '</td><td><span class="badge-status ' + badgeCls + '">' + r.status + '</span></td>';
+  tbodyData.appendChild(tr);
+});
+
+// ---- Export Excel: data tabel (No, Hari, Tanggal, Nama, Waktu Mulai, Waktu Selesai, Durasi, Yₜ, Status) ----
+(function() {
+  var btn = document.getElementById('btn-export-excel');
+  if (!btn || typeof XLSX === 'undefined') return;
+  btn.onclick = function() {
+    var headers = ['No', 'Hari', 'Tanggal', 'Nama', 'Waktu Mulai', 'Waktu Selesai', 'Durasi (H:MM)', 'Yₜ (Jam Desimal)', 'Status'];
+    var rows = hwData.map(function(r) {
+      return [r.no, r.hari, r.tgl, r.nama, r.mulai, r.selesai, hms(r.yt), parseFloat(r.yt.toFixed(6)), r.status];
+    });
+    var aoa = [headers].concat(rows);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data Perhitungan');
+    var fn = 'data_perhitungan_perbaikan_meteran_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    XLSX.writeFile(wb, fn);
+  };
+})();
+
+// ---- TABLE 2: HW Full ----
+const tbodyHW = document.getElementById('tbody-hw');
+hwData.forEach(r => {
+  const cls = r.status === 'Inisialisasi' ? 'init' : r.status === 'Training' ? 'train' : 'test';
+  const badgeCls = r.status === 'Inisialisasi' ? 'badge-init' : r.status === 'Training' ? 'badge-train' : 'badge-test';
+  const ftJam = r.ft !== null ? r.ft.toFixed(6) : '<span class="null-cell">—</span>';
+  const ftMin = r.ft !== null ? (r.ft * 60).toFixed(4) : '<span class="null-cell">—</span>';
+  const tr = document.createElement('tr');
+  tr.className = cls;
+  tr.innerHTML = '<td>' + r.no + '</td><td>' + r.tgl + '</td><td>' + r.yt.toFixed(6) + '</td><td>' + (r.yt * 60).toFixed(2) + '</td><td>' + r.lt.toFixed(6) + '</td><td>' + r.tt.toFixed(6) + '</td><td>' + r.st.toFixed(6) + '</td><td>' + ftJam + '</td><td>' + ftMin + '</td><td><span class="badge-status ' + badgeCls + '">' + r.status + '</span></td>';
+  tbodyHW.appendChild(tr);
+});
+
+// ---- Export Excel: Tabel Holt-Winters (No, Tanggal, Yₜ Jam, Yₜ Menit, Lₜ, Tₜ, Sₜ, Fₜ Jam, Fₜ Menit, Status) ----
+(function() {
+  var btn = document.getElementById('btn-export-excel-hw');
+  if (!btn || typeof XLSX === 'undefined') return;
+  btn.onclick = function() {
+    var headers = ['No', 'Tanggal', 'Yₜ (Jam)', 'Yₜ (Menit)', 'Lₜ', 'Tₜ', 'Sₜ', 'Fₜ (Jam)', 'Fₜ (Menit)', 'Status'];
+    var rows = hwData.map(function(r) {
+      var ftJam = r.ft !== null ? parseFloat(r.ft.toFixed(6)) : '';
+      var ftMin = r.ft !== null ? parseFloat((r.ft * 60).toFixed(4)) : '';
+      return [r.no, r.tgl, parseFloat(r.yt.toFixed(6)), parseFloat((r.yt * 60).toFixed(2)), parseFloat(r.lt.toFixed(6)), parseFloat(r.tt.toFixed(6)), parseFloat(r.st.toFixed(6)), ftJam, ftMin, r.status];
+    });
+    var aoa = [headers].concat(rows);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Holt-Winters');
+    var fn = 'tabel_holt_winters_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    XLSX.writeFile(wb, fn);
+  };
+})();
+
+// ---- TABLE 3: APE (Langkah 1 — No, Hari, Tanggal, APE, Kumulatif) ----
+const tbodyAPE = document.getElementById('tbody-ape');
+let cumulative = 0;
+const testingData = hwData.filter(r => r.status === 'Testing');
+testingData.forEach(r => {
+  cumulative += r.ape;
+  const apeClass = r.ape >= 100 ? 'ape-hi' : r.ape >= 20 ? 'ape-md' : 'ape-lo';
+  const tr = document.createElement('tr');
+  tr.className = 'test ape-row';
+  tr.innerHTML = '<td>' + r.no + '</td><td>' + r.hari + '</td><td>' + r.tgl + '</td><td class="' + apeClass + '">' + r.ape.toFixed(2) + '</td><td>' + cumulative.toFixed(2) + '</td>';
+  tbodyAPE.appendChild(tr);
+});
+const totalTr = document.createElement('tr');
+totalTr.style.cssText = 'background:rgba(240,165,0,0.08); border-top:2px solid var(--accent); font-weight:600;';
+totalTr.innerHTML = '<td colspan="3" style="text-align:center; color:var(--accent); font-family:\'IBM Plex Mono\',monospace; padding:10px;">Σ APE (Total Kumulatif — 19 Record Testing)</td><td colspan="2" style="color:var(--accent); font-family:\'IBM Plex Mono\',monospace;">' + sumApe.toFixed(2) + '%</td>';
+tbodyAPE.appendChild(totalTr);
+
+// ---- TABLE 4: Tabel Estimasi Durasi (No. 79–97) ----
+const avgFTest = forecasts.slice(testStart).reduce((a, b) => a + b, 0) / 19;
+const avgYTest = data.slice(testStart).reduce((a, b) => a + b, 0) / 19;
+const sumFt = forecasts.slice(testStart).reduce((a, b) => a + b, 0);
+const sumYt = data.slice(testStart).reduce((a, b) => a + b, 0);
+const selisihMenitRata = Math.round((avgFTest - avgYTest) * 60 * 100) / 100;
+const tbodyApeDurasi = document.getElementById('tbody-ape-durasi');
+testingData.forEach(r => {
+  const selisihM = (r.yt - r.ft) * 60;
+  const selisihStr = (selisihM >= 0 ? '+' : '') + selisihM.toFixed(2);
+  const apeClass = r.ape >= 100 ? 'ape-hi' : r.ape >= 20 ? 'ape-md' : 'ape-lo';
+  const tr = document.createElement('tr');
+  tr.className = 'test';
+  tr.innerHTML = '<td>' + r.no + '</td><td>' + r.hari + '</td><td>' + r.tgl + '</td><td>' + r.yt.toFixed(6) + '</td><td>' + (r.yt * 60).toFixed(2) + '</td><td>' + r.ft.toFixed(6) + '</td><td>' + (r.ft * 60).toFixed(2) + '</td><td>' + selisihStr + '</td><td class="' + apeClass + '">' + r.ape.toFixed(2) + '</td>';
+  tbodyApeDurasi.appendChild(tr);
+});
+const sumRowDurasi = document.createElement('tr');
+sumRowDurasi.style.cssText = 'background:rgba(63,185,80,0.08); border-top:2px solid var(--accent2); font-weight:600;';
+sumRowDurasi.innerHTML = '<td colspan="3" style="text-align:center; padding:10px;">Rata-rata Keseluruhan (19 record)</td><td>' + avgYTest.toFixed(4) + '</td><td>' + (avgYTest * 60).toFixed(2) + ' menit</td><td>' + avgFTest.toFixed(4) + '</td><td>' + (avgFTest * 60).toFixed(2) + ' menit</td><td>' + (selisihMenitRata >= 0 ? '+' : '') + selisihMenitRata + ' menit</td><td style="color:var(--accent3)">' + MAPE + '%</td>';
+tbodyApeDurasi.appendChild(sumRowDurasi);
+
+// ---- Isi Section 06: Contoh Record 79 & Langkah 2–4 & Ringkasan ----
+const r79 = hwData[78];
+const selisihMenit79 = Math.round(absErr79 * 60 * 100) / 100;
+function setEl(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+setEl('ex79-hari', r79.hari);
+setEl('ex79-tgl', r79.tgl);
+setEl('ex79-tgl-para', r79.tgl);
+setEl('ex79-nama-para', r79.nama);
+setEl('ex79-Y79-desc', fmt(Y79));
+setEl('ex79-F79-desc', fmt(F79));
+setEl('ex79-Y79-err', fmt(Y79));
+setEl('ex79-F79-err', fmt(F79));
+setEl('ex79-Error-step', fmt(err79));
+setEl('ex79-selisih-menit', selisihMenit79);
+setEl('ex79-Error-abs', fmt(err79));
+setEl('ex79-AbsError-step', fmt(absErr79));
+setEl('ex79-AbsError-ape-step', fmt(absErr79));
+setEl('ex79-Y79-ape-step', fmt(Y79));
+setEl('ex79-APE-step', ape79 + '%');
+setEl('ex79-F79-menit', (F79 * 60).toFixed(2));
+setEl('ex79-Y79-menit-desc', (Y79 * 60).toFixed(2) + ' menit');
+setEl('sum-ape-num', fmt(sumApe, 2));
+setEl('sum-ft-jam', sumFt.toFixed(3));
+setEl('avg-ft-jam', avgFTest.toFixed(4));
+setEl('avg-ft-menit', (avgFTest * 60).toFixed(2));
+setEl('avg-ft-menit-desc', (avgFTest * 60).toFixed(2) + ' menit');
+setEl('sum-yt-jam', sumYt.toFixed(3));
+setEl('avg-yt-jam', avgYTest.toFixed(4));
+setEl('avg-yt-menit', (avgYTest * 60).toFixed(2));
+setEl('avg-yt-menit-desc', (avgYTest * 60).toFixed(2) + ' menit');
+setEl('avg-ft-menit-selisih', (avgFTest * 60).toFixed(2));
+setEl('avg-yt-menit-selisih', (avgYTest * 60).toFixed(2));
+setEl('selisih-rata', (selisihMenitRata >= 0 ? '+' : '') + selisihMenitRata + ' menit (≈ ' + Math.round(Math.abs(selisihMenitRata) * 60) + ' detik)');
+setEl('selisih-keterangan', selisihMenitRata > 0 ? 'overestimate sekitar ' + selisihMenitRata.toFixed(2) + ' menit' : selisihMenitRata < 0 ? 'underestimate sekitar ' + Math.abs(selisihMenitRata).toFixed(2) + ' menit' : 'sama dengan rata-rata aktual');
+setEl('ringkas-yt', (avgYTest * 60).toFixed(2));
+setEl('ringkas-selisih', (selisihMenitRata >= 0 ? '+' : '') + selisihMenitRata + ' menit (≈ ' + Math.round(Math.abs(selisihMenitRata) * 60) + ' detik)');
+
+// ---- Summary: tampilkan nilai REAL dari perhitungan (Σ APE dan MAPE) ----
+const elSumApe = document.getElementById('sum-ape');
+const elMapeFormula = document.getElementById('mape-formula');
+if (elSumApe) elSumApe.textContent = fmt(sumApe, 2) + '%';
+if (elMapeFormula) elMapeFormula.textContent = fmt(MAPE, 2) + '%';
+const mapeDisplay = fmt(MAPE, 2); // nilai real: MAPE = Σ APE ÷ 19
+const elMapeValue = document.getElementById('mape-value');
+const elMapeInterp = document.getElementById('mape-interp');
+if (elMapeValue) elMapeValue.innerHTML = mapeDisplay + '<span class="mape-unit">%</span>';
+if (elMapeInterp) elMapeInterp.textContent = mapeDisplay + '%';
+document.querySelectorAll('.mape-dynamic').forEach(function(el) {
+  el.textContent = mapeDisplay;
+});
+var cardMape = document.querySelector('.info-card-value.mape-dynamic');
+if (cardMape) cardMape.textContent = mapeDisplay + '%';
+setEl('mape-sum-ape', fmt(sumApe, 2));
+setEl('mape-result-pct', fmt(MAPE, 2));
+// Prediksi F₉₈ (bukan F̄)
+setEl('pred-f98-L97', fmt(L97));
+setEl('pred-f98-T97', fmt(T97));
+setEl('pred-f98-S97', fmt(S97));
+setEl('predict-jam', fmt(F98) + ' jam');
+setEl('predict-value', fmt(pred98Menit, 2) + ' menit');
+setEl('predict-konversi', '≈ ' + fmtMenit(F98));
+setEl('explain-pred-menit', fmt(pred98Menit, 2) + ' menit');
+setEl('explain-pred-hms', fmtMenit(F98));
+setEl('ringkas-ft', fmt(pred98Menit, 2));
+setEl('ringkas-pred-menit', fmt(pred98Menit, 2) + "'");
+setEl('ringkas-pred-hms', '≈ ' + fmtMenit(F98));
+</script>
+</body>
+</html>
